@@ -28,7 +28,9 @@ export function setupPaint(ctx) {
   }
 
   function dabLine(from, to) {
-    const radius = state.brush * Math.max(state.room.width, state.room.height);
+    // Constant size on screen: zooming in gives a finer brush.
+    const zoom = state.view.w / state.fit.w;
+    const radius = (state.brush * Math.max(state.room.width, state.room.height)) / zoom;
     const steps = Math.max(1, Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) / (radius / 3)));
     let rect = null;
     for (let i = 1; i <= steps; i++) {

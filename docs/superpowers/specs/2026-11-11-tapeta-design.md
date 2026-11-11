@@ -39,7 +39,7 @@ tapetę i maski. Zapis wyniku to ten sam shader narysowany w rozdzielczości zdj
 
 | Plik | Odpowiedzialność | Zależy od |
 |---|---|---|
-| `src/homography.js` | Czyste funkcje: macierz 3×3 z czterech par punktów, jej odwrotność, szacowane proporcje ściany z czworokąta | — |
+| `src/homography.js` | Czyste funkcje: macierz 3×3 z czterech par punktów, wypukłość czworokąta, szacowane proporcje ściany z czworokąta | — |
 | `src/color.js` | Czyste funkcje: RGB → YCbCr, mediana koloru ściany z próbek, odległość koloru | — |
 | `src/images.js` | Wczytanie pliku (`createImageBitmap(file, { imageOrientation: 'from-image' })` — obrót EXIF robi przeglądarka, bez własnego parsera), zmniejszenie do 2000 px po dłuższym boku, piksele zdjęcia pokoju jako `ImageData` | — |
 | `src/mask.js` | Maska ręczna (`Uint8Array`): pociągnięcia gumki i pędzla, mądra gumka, stos cofania | `color.js` |
@@ -154,7 +154,7 @@ pociągnięciem). Zmiana rogów ściany nie kasuje maski ręcznej.
 ## Testy i weryfikacja
 
 - Testy jednostkowe (`node --test`, bez zależności; `package.json` z `"type": "module"`) dla `homography.js` i `color.js`:
-  odwzorowanie czterech rogów na kwadrat jednostkowy, odwrotność, czworokąt zdegenerowany,
+  odwzorowanie czterech rogów na kwadrat jednostkowy, wypukłość, czworokąt zdegenerowany,
   mediana koloru, odległość koloru przy zmianie samej jasności.
 - Weryfikacja ręczna w przeglądarce przez lokalny serwer HTTP (moduły nie działają z
   `file://`; widok telefonu 375×812 i komputer) na przykładowych

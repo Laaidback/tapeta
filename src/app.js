@@ -5,6 +5,7 @@ import { wallReference } from './color.js';
 import { Mask } from './mask.js';
 import { setupCorners } from './corners.js';
 import { setupControls } from './controls.js';
+import { setupPaint } from './paint.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -191,6 +192,7 @@ if (renderer) {
   new ResizeObserver(resize).observe(stage);
   setupCorners(ctx);
   setupControls(ctx);
+  setupPaint(ctx);
 
   updateUi();
   resize();

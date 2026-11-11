@@ -98,8 +98,9 @@ domyślnie 1×) pozwala poprawić zniekształcenie.
 Kolor wynikowy = kolor tapety × jasność tapety × współczynnik cienia.
 
 Współczynnik cienia = `mix(1, L / L_ref, siła)`, gdzie `L` to jasność piksela zdjęcia pokoju,
-`L_ref` to mediana jasności ściany, a `siła` pochodzi z suwaka „Siła cieni” (0–100%,
-domyślnie 70%). Współczynnik jest ograniczony do zakresu 0,2–1,6. Suwak „Jasność tapety”:
+`L_ref` to 90. percentyl jasności ściany (ściana w świetle — tapeta ciemnieje w cieniu,
+ale nie prześwietla się w jasnej połowie), a `siła` pochodzi z suwaka „Siła cieni” (0–100%,
+domyślnie 70%). Współczynnik jest ograniczony do zakresu 0,2–1,2. Suwak „Jasność tapety”:
 50–150%, domyślnie 100%.
 
 ## Maski
@@ -109,7 +110,7 @@ maskę ręczną.
 
 **Kolor odniesienia ściany.** Po kroku 2 (i po każdej zmianie rogów) aplikacja pobiera
 siatkę 32×32 próbek ze środkowych 80% czworokąta (próbki poza zdjęciem pomijane) i liczy
-medianę Cb, Cr oraz medianę jasności Y (`L_ref`). Mediana jest odporna na meble zajmujące mniej niż połowę ściany.
+medianę Y, Cb, Cr (kolor odniesienia maski) oraz 90. percentyl Y (`L_ref`). Mediana jest odporna na meble zajmujące mniej niż połowę ściany.
 
 **Odległość koloru** — jedna definicja, w `color.js` i w shaderze: w YCbCr (BT.601, składowe
 0–1) `d = length(ΔCb, ΔCr) + 0,25 · |ΔY|`. Cień na ścianie zmienia głównie Y, więc nie robi

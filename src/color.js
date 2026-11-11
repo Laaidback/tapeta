@@ -17,10 +17,19 @@ export function median(values) {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
+// Value below which the fraction `q` of the values lies.
+export function percentile(values, q) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
+}
+
 const lerp = (a, b, t) => a + (b - a) * t;
 
-// Median [Y, Cb, Cr] of a grid of samples from the central 80% of the quad.
-// `image` is { data, width, height } (ImageData). Null when no sample is inside.
+// [Y, Cb, Cr, light] from a grid of samples in the central 80% of the quad:
+// the median color (for the automatic mask) and `light`, the 90th percentile of
+// Y (the lit wall, for shading: wallpaper is darkened in shadow, not blown out
+// in the bright half). `image` is { data, width, height } (ImageData).
+// Null when no sample is inside the photo.
 export function wallReference(image, corners, grid = 32) {
   const [tl, tr, br, bl] = corners;
   const ys = [], cbs = [], crs = [];
@@ -37,7 +46,7 @@ export function wallReference(image, corners, grid = 32) {
     }
   }
   if (ys.length === 0) return null;
-  return [median(ys), median(cbs), median(crs)];
+  return [median(ys), median(cbs), median(crs), percentile(ys, 0.9)];
 }
 
 // Sensitivity 0..1 -> distance threshold of the automatic mask.

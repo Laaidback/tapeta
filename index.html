@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Tapeta na ścianie</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <ol id="steps">
+      <li>Pokój</li>
+      <li>Ściana</li>
+      <li>Tapeta</li>
+      <li>Popraw</li>
+    </ol>
+  </header>
+
+  <main id="stage">
+    <canvas id="view"></canvas>
+    <svg id="outline" hidden><polygon id="quad"></polygon></svg>
+    <div class="handle" hidden></div>
+    <div class="handle" hidden></div>
+    <div class="handle" hidden></div>
+    <div class="handle" hidden></div>
+    <canvas id="loupe" width="240" height="240" hidden></canvas>
+  </main>
+
+  <section id="panel">
+    <div class="step" data-step="1">
+      <p class="hint">Wybierz zdjęcie pokoju od klienta.</p>
+      <label class="button primary">Wybierz zdjęcie pokoju
+        <input id="roomFile" type="file" accept="image/*" hidden>
+      </label>
+    </div>
+
+    <div class="step" data-step="2" hidden>
+      <p class="hint">Przesuń cztery punkty na rogi ściany.</p>
+    </div>
+
+    <div class="step" data-step="3" hidden>
+      <label class="button primary">Wybierz zdjęcie tapety
+        <input id="paperFile" type="file" accept="image/*" hidden>
+      </label>
+      <div class="segmented" id="mode">
+        <button type="button" data-tiled="1" class="on">Wzór powtarzany</button>
+        <button type="button" data-tiled="0">Fototapeta</button>
+      </div>
+      <label class="slider" id="patternRow">Wielkość wzoru
+        <input id="pattern" type="range" min="1" max="20" value="15">
+      </label>
+      <label class="slider">Czułość (zdejmuje tapetę z mebli)
+        <input id="sensitivity" type="range" min="0" max="100" value="50">
+      </label>
+      <label class="slider">Siła cieni
+        <input id="shadow" type="range" min="0" max="100" value="70">
+      </label>
+      <label class="slider">Jasność tapety
+        <input id="brightness" type="range" min="50" max="150" value="100">
+      </label>
+      <label class="slider">Proporcje ściany
+        <input id="aspect" type="range" min="50" max="200" value="100">
+      </label>
+    </div>
+
+    <div class="step" data-step="4" hidden>
+      <p class="hint">Jeden palec maluje. Dwa palce przesuwają i powiększają.</p>
+      <div class="segmented" id="tool">
+        <button type="button" data-tool="erase" class="on">Gumka</button>
+        <button type="button" data-tool="restore">Pędzel</button>
+        <button type="button" id="undo" disabled>Cofnij</button>
+      </div>
+      <label class="check"><input id="smart" type="checkbox" checked> Mądra gumka (zatrzymuje się na krawędzi)</label>
+      <label class="slider">Rozmiar
+        <input id="brush" type="range" min="1" max="10" value="4">
+      </label>
+    </div>
+
+    <div id="output" hidden>
+      <button type="button" id="before">Przed / Po</button>
+      <button type="button" id="save">Zapisz zdjęcie</button>
+      <button type="button" id="share" class="primary">Udostępnij</button>
+    </div>
+  </section>
+
+  <footer>
+    <button type="button" id="back">Wstecz</button>
+    <button type="button" id="next" class="primary">Dalej</button>
+  </footer>
+
+  <div id="toast" hidden></div>
+  <div id="fatal" hidden>Ta przeglądarka nie obsługuje podglądu. Otwórz stronę w Chrome albo Safari.</div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

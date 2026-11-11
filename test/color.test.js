@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ycbcr, distance, median, wallReference, threshold } from '../src/color.js';
+import { ycbcr, distance, median, percentile, wallReference, threshold } from '../src/color.js';
 
 const near = (a, b, eps = 1e-3) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
 
@@ -40,7 +40,23 @@ test('wallReference ignores furniture covering less than half of the wall', () =
   }
   const corners = [[0, 0], [1, 0], [1, 1], [0, 1]];
   const expected = ycbcr(200, 190, 170);
-  wallReference(image, corners).forEach((value, i) => near(value, expected[i]));
+  wallReference(image, corners).slice(0, 3).forEach((value, i) => near(value, expected[i]));
+});
+
+test('percentile picks the value at the given fraction', () => {
+  assert.equal(percentile([5, 1, 4, 2, 3, 6, 7, 8, 9, 10], 0.9), 10);
+  assert.equal(percentile([1, 2, 3, 4], 0.5), 3);
+  assert.equal(percentile([7], 0.9), 7);
+});
+
+test('wallReference reports the lit wall, not the median, as light', () => {
+  const image = solidImage(40, 40, [100, 100, 100]);
+  for (let y = 0; y < 40; y++) {
+    for (let x = 0; x < 12; x++) image.data.set([220, 220, 220, 255], (y * 40 + x) * 4);
+  }
+  const reference = wallReference(image, [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  near(reference[0], 100 / 255);
+  near(reference[3], 220 / 255);
 });
 
 test('wallReference skips samples outside the photo and returns null with none', () => {

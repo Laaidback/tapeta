@@ -3,6 +3,7 @@ import { createRenderer } from './renderer.js';
 import { fitView } from './layout.js';
 import { wallReference } from './color.js';
 import { Mask } from './mask.js';
+import { setupCorners } from './corners.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -187,6 +188,7 @@ if (renderer) {
   $('back').addEventListener('click', () => goTo(state.step - 1));
   $('next').addEventListener('click', () => { if (canAdvance()) goTo(state.step + 1); });
   new ResizeObserver(resize).observe(stage);
+  setupCorners(ctx);
 
   updateUi();
   resize();

@@ -44,7 +44,10 @@ tapetę i maski. Zapis wyniku to ten sam shader narysowany w rozdzielczości zdj
 | `src/images.js` | Wczytanie pliku (`createImageBitmap(file, { imageOrientation: 'from-image' })` — obrót EXIF robi przeglądarka, bez własnego parsera), zmniejszenie do 2000 px po dłuższym boku, piksele zdjęcia pokoju jako `ImageData` | — |
 | `src/mask.js` | Maska ręczna (`Uint8Array`): pociągnięcia gumki i pędzla, mądra gumka, stos cofania | `color.js` |
 | `src/renderer.js` | WebGL: tekstury, shader, rysowanie podglądu i eksport do PNG/JPEG | `homography.js` |
-| `src/app.js` | Stan aplikacji, kroki, obsługa dotyku i myszy, suwaki, zapis i udostępnianie | wszystkie |
+| `src/layout.js` | Czyste funkcje: dopasowanie zdjęcia do ekranu, powiększanie widoku, powtórzenia wzoru, kadr fototapety, nazwa pliku | — |
+| `src/app.js` | Stan aplikacji, kroki, pętla rysowania | wszystkie |
+| `src/corners.js`, `src/controls.js`, `src/paint.js`, `src/output.js` | Interfejs kolejnych kroków: rogi i lupa, suwaki tapety, gumka i gesty, zapis i udostępnianie | `app.js` przez wspólny kontekst |
+| `src/demo.js` | Tylko `?demo`: sztuczne zdjęcie pokoju i tapety do weryfikacji bez wybierania plików | `app.js` |
 
 Stan aplikacji to jeden obiekt: zdjęcie pokoju, zdjęcie tapety, cztery rogi (w układzie
 zdjęcia pokoju, 0–1; uchwyt poza zdjęciem: −0,2…1,2), tryb tapety, wartości suwaków, kolor
@@ -132,8 +135,8 @@ pociągnięciem). Zmiana rogów ściany nie kasuje maski ręcznej.
 
 ## Zapis i udostępnianie
 
-- „Zapisz zdjęcie”: eksport JPEG (jakość 0,92) w rozdzielczości zdjęcia pokoju (rysowanie do
-  framebuffera + `readPixels`), pobranie pliku `tapeta-RRRR-MM-DD-GGMM.jpg`. Na iPhonie plik
+- „Zapisz zdjęcie”: eksport JPEG (jakość 0,92) w rozdzielczości zdjęcia pokoju (kanwa WebGL chwilowo
+  w rozmiarze zdjęcia, kopia przez `drawImage` na kanwę 2D), pobranie pliku `tapeta-RRRR-MM-DD-GGMM.jpg`. Na iPhonie plik
   trafia do „Plików”; do galerii prowadzi „Udostępnij”.
 - „Udostępnij”: `navigator.share({ files })`. Przycisk ukryty, gdy przeglądarka nie obsługuje
   udostępniania plików (`navigator.canShare`).

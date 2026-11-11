@@ -6,6 +6,7 @@ import { Mask } from './mask.js';
 import { setupCorners } from './corners.js';
 import { setupControls } from './controls.js';
 import { setupPaint } from './paint.js';
+import { setupOutput } from './output.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -193,6 +194,7 @@ if (renderer) {
   setupCorners(ctx);
   setupControls(ctx);
   setupPaint(ctx);
+  setupOutput(ctx);
 
   updateUi();
   resize();

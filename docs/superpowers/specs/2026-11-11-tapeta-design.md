@@ -40,14 +40,15 @@ tapetę i maski. Zapis wyniku to ten sam shader narysowany w rozdzielczości zdj
 | Plik | Odpowiedzialność | Zależy od |
 |---|---|---|
 | `src/homography.js` | Czyste funkcje: macierz 3×3 z czterech par punktów, jej odwrotność, szacowane proporcje ściany z czworokąta | — |
-| `src/color.js` | Czyste funkcje: RGB → jasność i chroma, mediana koloru ściany z próbek, odległość koloru | — |
-| `src/images.js` | Wczytanie pliku, obrót według EXIF, zmniejszenie do 2000 px po dłuższym boku | — |
-| `src/mask.js` | Maska ręczna (kanwa 2D poza ekranem): pociągnięcia gumki i pędzla, mądra gumka, stos cofania | `color.js` |
+| `src/color.js` | Czyste funkcje: RGB → YCbCr, mediana koloru ściany z próbek, odległość koloru | — |
+| `src/images.js` | Wczytanie pliku (`createImageBitmap(file, { imageOrientation: 'from-image' })` — obrót EXIF robi przeglądarka, bez własnego parsera), zmniejszenie do 2000 px po dłuższym boku, piksele zdjęcia pokoju jako `ImageData` | — |
+| `src/mask.js` | Maska ręczna (`Uint8Array`): pociągnięcia gumki i pędzla, mądra gumka, stos cofania | `color.js` |
 | `src/renderer.js` | WebGL: tekstury, shader, rysowanie podglądu i eksport do PNG/JPEG | `homography.js` |
 | `src/app.js` | Stan aplikacji, kroki, obsługa dotyku i myszy, suwaki, zapis i udostępnianie | wszystkie |
 
 Stan aplikacji to jeden obiekt: zdjęcie pokoju, zdjęcie tapety, cztery rogi (w układzie
-zdjęcia pokoju, 0–1), tryb tapety, wartości suwaków, kolor odniesienia ściany, maska ręczna.
+zdjęcia pokoju, 0–1; uchwyt poza zdjęciem: −0,2…1,2), tryb tapety, wartości suwaków, kolor
+odniesienia ściany, maska ręczna, przesunięcie i powiększenie widoku.
 Każda zmiana stanu wywołuje jedno przerysowanie.
 
 ## Przebieg
@@ -65,10 +66,11 @@ utraty późniejszych ustawień.
    (domyślnie wzór). Suwaki opisane niżej. Podgląd od razu z automatyczną maską.
 4. **Popraw.** Narzędzia: „Gumka” (zdejmuje tapetę), „Pędzel” (przywraca tapetę), przełącznik
    „Mądra gumka” (domyślnie wł.), suwak rozmiaru, „Cofnij”. Dwa palce przesuwają i powiększają
-   widok; jeden palec maluje.
+   widok; jeden palec maluje. Drugi palec w trakcie pociągnięcia anuluje je (maska wraca do
+   stanu sprzed pociągnięcia).
 
 W krokach 3 i 4: przycisk „Przed / Po” (przytrzymanie pokazuje oryginał), „Zapisz zdjęcie”
-i „Udostępnij”.
+i „Udostępnij” — nieaktywne, dopóki nie ma zdjęcia tapety.
 
 ## Tapeta na ścianie
 
@@ -76,13 +78,15 @@ Homografia mapuje punkt zdjęcia pokoju na współrzędne ściany (u, v) w zakre
 dla każdego piksela liczy (u, v); poza zakresem zostaje oryginalne zdjęcie.
 
 Proporcje ściany (szerokość / wysokość) są szacowane z czworokąta: średnia długość krawędzi
-górnej i dolnej przez średnią lewej i prawej. Suwak „Proporcje ściany” (0,5×–2× szacunku,
+górnej i dolnej przez średnią lewej i prawej, liczone w pikselach zdjęcia (nie w 0–1). Suwak „Proporcje ściany” (0,5×–2× szacunku,
 domyślnie 1×) pozwala poprawić zniekształcenie.
 
 - **Wzór powtarzany:** suwak „Wielkość wzoru” ustawia liczbę powtórzeń w poziomie (1–20,
   domyślnie 6). Liczba powtórzeń w pionie wynika z proporcji ściany i proporcji zdjęcia
   tapety, tak aby wzór nie był rozciągnięty. Tekstura z zawijaniem `REPEAT`; zdjęcie tapety
-  jest wcześniej skalowane do wymiarów będących potęgą dwójki (wymóg WebGL 1 dla `REPEAT`).
+  jest wcześniej skalowane do wymiarów będących potęgą dwójki (wymóg WebGL 1 dla `REPEAT`),
+  z mipmapami (`LINEAR_MIPMAP_LINEAR`), żeby gęsty wzór pod kątem nie migotał. Zdjęcie, które
+  nie jest bezszwowym kafelkiem, pokaże szwy — ograniczenie, nie błąd.
 - **Fototapeta:** jeden obraz wypełnia ścianę z zachowaniem proporcji (przycięcie do środka,
   jak `object-fit: cover`).
 
@@ -101,22 +105,26 @@ Krycie tapety w pikselu = wewnątrz czworokąta × maska automatyczna, z nadpisa
 maskę ręczną.
 
 **Kolor odniesienia ściany.** Po kroku 2 (i po każdej zmianie rogów) aplikacja pobiera
-siatkę 32×32 próbek ze środkowych 80% czworokąta i liczy medianę chromy oraz medianę
-jasności (`L_ref`). Mediana jest odporna na meble zajmujące mniej niż połowę ściany.
+siatkę 32×32 próbek ze środkowych 80% czworokąta (próbki poza zdjęciem pomijane) i liczy
+medianę Cb, Cr oraz medianę jasności Y (`L_ref`). Mediana jest odporna na meble zajmujące mniej niż połowę ściany.
 
-**Maska automatyczna** (liczona w shaderze). Odległość piksela od koloru odniesienia:
-odległość chromy plus różnica jasności z wagą 0,25 — cień na ścianie zmienia głównie
-jasność, więc nie robi dziury. Krycie = `1 − smoothstep(próg, próg + miękkość, odległość)`.
-Próg pochodzi z suwaka „Czułość” (0–100%, domyślnie 50%); 0% wyłącza maskę automatyczną
-(tapeta na całym czworokącie).
+**Odległość koloru** — jedna definicja, w `color.js` i w shaderze: w YCbCr (BT.601, składowe
+0–1) `d = length(ΔCb, ΔCr) + 0,25 · |ΔY|`. Cień na ścianie zmienia głównie Y, więc nie robi
+dziury.
 
-**Maska ręczna.** Jednokanałowa kanwa w rozdzielczości zdjęcia pokoju, przesyłana jako
-tekstura. Wartość 128 = „bez zmian” (decyduje maska automatyczna), 0 = tapeta zdjęta,
+**Maska automatyczna** (liczona w shaderze). Krycie = `1 − smoothstep(próg, próg + 0,03, d)`
+dla odległości od koloru odniesienia. Suwak „Czułość” (0–100%, domyślnie 50%): wyższa czułość
+= niższy próg = tapeta schodzi z większej liczby pikseli. Próg liniowo od 0,30 (1%) do 0,03
+(100%); 0% wyłącza maskę automatyczną (tapeta na całym czworokącie). Wartości startowe, do
+strojenia na prawdziwych zdjęciach.
+
+**Maska ręczna.** `Uint8Array` w rozdzielczości zdjęcia pokoju, przesyłana jako tekstura
+`LUMINANCE` (po pociągnięciu `texSubImage2D` tylko zmienionego prostokąta). Wartość 128 = „bez zmian” (decyduje maska automatyczna), 0 = tapeta zdjęta,
 255 = tapeta wymuszona. Shader miesza liniowo, więc miękki brzeg pędzla daje miękkie przejście.
 
 **Mądra gumka.** Przy starcie pociągnięcia zapamiętywany jest kolor zdjęcia pokoju pod
 środkiem pędzla. Pociągnięcie zmienia tylko piksele, których odległość koloru od
-zapamiętanego jest mniejsza od stałego progu. Działa tak samo dla pędzla przywracającego.
+zapamiętanego jest mniejsza od stałego progu 0,08 (do strojenia). Działa tak samo dla pędzla przywracającego.
 Wyłączenie przełącznika daje zwykły okrągły pędzel.
 
 **Cofanie.** Stos do 20 kroków; krok = jedno pociągnięcie (zapis fragmentu maski objętego
@@ -124,8 +132,9 @@ pociągnięciem). Zmiana rogów ściany nie kasuje maski ręcznej.
 
 ## Zapis i udostępnianie
 
-- „Zapisz zdjęcie”: eksport JPEG (jakość 0,92) w rozdzielczości zdjęcia pokoju, pobranie
-  pliku `tapeta-RRRR-MM-DD-GGMM.jpg`.
+- „Zapisz zdjęcie”: eksport JPEG (jakość 0,92) w rozdzielczości zdjęcia pokoju (rysowanie do
+  framebuffera + `readPixels`), pobranie pliku `tapeta-RRRR-MM-DD-GGMM.jpg`. Na iPhonie plik
+  trafia do „Plików”; do galerii prowadzi „Udostępnij”.
 - „Udostępnij”: `navigator.share({ files })`. Przycisk ukryty, gdy przeglądarka nie obsługuje
   udostępniania plików (`navigator.canShare`).
 
@@ -137,14 +146,15 @@ pociągnięciem). Zmiana rogów ściany nie kasuje maski ręcznej.
   w Chrome albo Safari.”
 - Utrata kontekstu WebGL: ponowne utworzenie tekstur ze stanu i przerysowanie.
 - Odświeżenie strony kasuje pracę; przed zamknięciem karty z wczytanym zdjęciem przeglądarka
-  pyta o potwierdzenie (`beforeunload`).
+  pyta o potwierdzenie (`beforeunload`; na telefonach działa nie zawsze).
 
 ## Testy i weryfikacja
 
-- Testy jednostkowe (`node --test`, bez zależności) dla `homography.js` i `color.js`:
+- Testy jednostkowe (`node --test`, bez zależności; `package.json` z `"type": "module"`) dla `homography.js` i `color.js`:
   odwzorowanie czterech rogów na kwadrat jednostkowy, odwrotność, czworokąt zdegenerowany,
   mediana koloru, odległość koloru przy zmianie samej jasności.
-- Weryfikacja ręczna w przeglądarce (widok telefonu 375×812 i komputer) na przykładowych
+- Weryfikacja ręczna w przeglądarce przez lokalny serwer HTTP (moduły nie działają z
+  `file://`; widok telefonu 375×812 i komputer) na przykładowych
   zdjęciach: pusta ściana, ściana z kanapą i lampą, ściana z oknem, zdjęcie pod kątem;
   oba tryby tapety; eksport ma rozdzielczość zdjęcia pokoju i wygląda jak podgląd.
 

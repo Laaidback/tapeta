@@ -22,6 +22,9 @@ const state = {
   paper: null,       // 2D canvas with the wallpaper photo
   paperAspect: 1,
   corners: DEFAULT_CORNERS,
+  corners2: null,    // second wall (see src/walls.js) or null
+  secondWidth: 1,    // correction of the second wall's estimated width
+  ref2: null,        // second wall Y, Cb, Cr
   tiled: true,
   repeats: 6,
   aspectFactor: 1,
@@ -98,6 +101,10 @@ function toast(text) {
 function updateReference() {
   if (!state.roomData) return;
   state.ref = wallReference(state.roomData, state.corners) || [0.5, 0.5, 0.5, 0.5];
+  state.ref2 = state.corners2 ? wallReference(state.roomData, state.corners2) : null;
+  // One light for both walls: the darker wall gets darker wallpaper, so the
+  // room corner stays visible.
+  if (state.ref2) state.ref[3] = Math.max(state.ref[3], state.ref2[3]);
   updateLight();
 }
 
@@ -105,7 +112,7 @@ function updateReference() {
 function updateLight() {
   if (!state.patterned || !state.roomData) return;
   if (!state.lightGrid) state.lightGrid = lightGrid(state.roomData);
-  state.light = smoothLight(state.lightGrid, wallWeights(state.lightGrid, state.corners, state.mask));
+  state.light = smoothLight(state.lightGrid, wallWeights(state.lightGrid, state.corners, state.mask, state.corners2));
   renderer.setLight(state.light);
 }
 
@@ -123,6 +130,11 @@ function updateUi() {
   document.querySelectorAll('.step').forEach((panel) => {
     panel.hidden = Number(panel.dataset.step) !== state.step;
   });
+  $('secondWall').textContent = state.corners2 ? 'Usuń drugą ścianę' : 'Dodaj drugą ścianę';
+  $('wallHint').textContent = state.corners2
+    ? 'Ustaw punkty od lewej do prawej. Środkowe punkty połóż na narożniku ścian.'
+    : 'Przesuń cztery punkty na rogi ściany.';
+  $('secondWidthRow').hidden = !state.corners2;
   $('output').hidden = state.step < 3;
   ['before', 'save', 'share'].forEach((id) => { $(id).disabled = !state.paper; });
   $('back').disabled = state.step === 1;
@@ -146,6 +158,7 @@ function useRoom(image) {
   state.lightGrid = null;
   state.light = null;
   state.corners = DEFAULT_CORNERS;
+  state.corners2 = null;
   renderer.setRoom(image);
   renderer.setMask(state.mask);
   updateReference();

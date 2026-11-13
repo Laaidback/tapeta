@@ -46,13 +46,14 @@ export function insideQuad(corners, x, y) {
 // 1 for cells that show the wall, 0 for cells outside the quad or erased in
 // the mask (furniture), so that neither darkens the wall next to it.
 // `mask` is { data, width, height } with one byte per pixel, or null.
-export function wallWeights(grid, corners, mask) {
+// `second` is the optional second wall's quad.
+export function wallWeights(grid, corners, mask, second = null) {
   const weights = new Float32Array(grid.width * grid.height);
   for (let j = 0; j < grid.height; j++) {
     for (let i = 0; i < grid.width; i++) {
       const u = (i + 0.5) / grid.width;
       const v = (j + 0.5) / grid.height;
-      if (!insideQuad(corners, u, v)) continue;
+      if (!insideQuad(corners, u, v) && !(second && insideQuad(second, u, v))) continue;
       if (mask) {
         const x = Math.min(mask.width - 1, Math.floor(u * mask.width));
         const y = Math.min(mask.height - 1, Math.floor(v * mask.height));

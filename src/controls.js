@@ -27,6 +27,7 @@ export function setupControls(ctx) {
     ['shadow', 'shadow', (value) => value / 100],
     ['brightness', 'brightness', (value) => value / 100],
     ['aspect', 'aspectFactor', (value) => value / 100],
+    ['secondWidth', 'secondWidth', (value) => value / 100],
   ];
   sliders.forEach(([id, key, convert]) => {
     const input = $(id);

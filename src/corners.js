@@ -1,4 +1,4 @@
-import { isConvex } from './homography.js';
+import { addSecondWall, handlePoints, moveHandle } from './walls.js';
 
 const LOUPE = 120;      // CSS pixels
 const MAGNIFY = 3;
@@ -10,20 +10,31 @@ export function setupCorners(ctx) {
   const handles = [...document.querySelectorAll('.handle')];
   const outline = document.getElementById('outline');
   const quad = document.getElementById('quad');
+  const seam = document.getElementById('seam');
+  const toggle = document.getElementById('secondWall');
   const loupe = document.getElementById('loupe');
   const glass = loupe.getContext('2d');
 
   function place() {
     const show = state.step === 2 && !!state.room;
     outline.toggleAttribute('hidden', !show); // <svg> has no `hidden` property
+    const points = handlePoints(state.corners, state.corners2);
     handles.forEach((handle, index) => {
-      handle.hidden = !show;
-      if (!show) return;
-      const [x, y] = ctx.toStage(...state.corners[index]);
+      handle.hidden = !show || index >= points.length;
+      if (handle.hidden) return;
+      const [x, y] = ctx.toStage(...points[index]);
       handle.style.transform = `translate(${x}px, ${y}px)`;
     });
-    if (show) {
-      quad.setAttribute('points', state.corners.map((c) => ctx.toStage(...c).join(',')).join(' '));
+    seam.toggleAttribute('hidden', !state.corners2);
+    if (!show) return;
+    const [tl, tr, br, bl] = state.corners;
+    const border = state.corners2 ? [tl, tr, state.corners2[1], state.corners2[2], br, bl] : state.corners;
+    quad.setAttribute('points', border.map((c) => ctx.toStage(...c).join(',')).join(' '));
+    if (state.corners2) {
+      const [x1, y1] = ctx.toStage(...tr);
+      const [x2, y2] = ctx.toStage(...br);
+      seam.setAttribute('x1', x1); seam.setAttribute('y1', y1);
+      seam.setAttribute('x2', x2); seam.setAttribute('y2', y2);
     }
   }
 
@@ -65,9 +76,10 @@ export function setupCorners(ctx) {
       const y = Math.min(box.bottom - INSET, Math.max(box.top + INSET, event.clientY));
       const [u, v] = ctx.toImage(x, y);
       const point = [clamp(u), clamp(v)];
-      const next = state.corners.map((corner, i) => (i === index ? point : corner));
-      if (!isConvex(next)) return; // ignore moves that would fold the quad
-      state.corners = next;
+      const next = moveHandle(state.corners, state.corners2, index, point);
+      if (!next) return; // ignore moves that would fold a wall
+      state.corners = next.corners;
+      state.corners2 = next.corners2;
       showLoupe(point[0], point[1]);
       ctx.requestDraw();
     });
@@ -78,6 +90,19 @@ export function setupCorners(ctx) {
     };
     handle.addEventListener('pointerup', release);
     handle.addEventListener('pointercancel', release);
+  });
+
+  toggle.addEventListener('click', () => {
+    if (state.corners2) {
+      state.corners2 = null;
+    } else {
+      const next = addSecondWall(state.corners);
+      state.corners = next.corners;
+      state.corners2 = next.corners2;
+    }
+    ctx.updateReference();
+    ctx.updateUi();
+    ctx.requestDraw();
   });
 
   ctx.onDraw(place);

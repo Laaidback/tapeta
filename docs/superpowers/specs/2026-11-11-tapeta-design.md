@@ -178,3 +178,15 @@ Na ścianie ze starą tapetą automatyczna maska koloru robi dziury, a cieniowan
 - mapa liczy się ponownie po zmianie rogów, po każdym pociągnięciu gumki i po „Cofnij”.
 
 Demo: `?demo=3&wall=pattern`.
+
+## Dwie ściany w narożniku (2026-11-13)
+
+Tapeta na dwóch prostopadłych ścianach. W kroku „Ściana” przycisk „Dodaj drugą ścianę” / „Usuń drugą ścianę”:
+
+- 6 punktów: pierwsza ściana jest lewa (`corners`), druga (`corners2`) dzieli z nią krawędź narożnika (`corners2[0]` = `corners[1]`, `corners2[3]` = `corners[2]`). Geometria w `src/walls.js`. Nowa ściana przedłuża pierwszą w prawo; gdy brak miejsca, pierwsza dzieli się na pół.
+- Shader ma drugą homografię. Współrzędna x biegnie przez obie ściany (`uSplit` = udział pierwszej w łącznej szerokości), więc wzór i fototapeta przechodzą przez narożnik bez przerwy. Wspólna krawędź jest twarda, bez wygaszania.
+- Szerokości ścian z `wallAspect` każdego czworokąta; suwak „Szerokość drugiej ściany” (40–250%) poprawia szacunek. „Wielkość wzoru” liczy powtórzenia na łącznej szerokości.
+- Maska koloru: osobny kolor odniesienia dla każdej ściany (`uRef`, `uRef2`). Jasność odniesienia wspólna (większa z dwóch), więc ciemniejsza ściana dostaje ciemniejszą tapetę i narożnik zostaje widoczny.
+- „Ściana ma wzór”: mapa jasności liczona z obu czworokątów.
+
+Poza zakresem: ściany, które się nie stykają; więcej niż jeden narożnik. Demo: `?demo=3&wall=corner`.

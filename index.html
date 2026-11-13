@@ -18,7 +18,9 @@
 
   <main id="stage">
     <canvas id="view"></canvas>
-    <svg id="outline" hidden><polygon id="quad"></polygon></svg>
+    <svg id="outline" hidden><polygon id="quad"></polygon><line id="seam"></line></svg>
+    <div class="handle" hidden></div>
+    <div class="handle" hidden></div>
     <div class="handle" hidden></div>
     <div class="handle" hidden></div>
     <div class="handle" hidden></div>
@@ -35,7 +37,8 @@
     </div>
 
     <div class="step" data-step="2" hidden>
-      <p class="hint">Przesuń cztery punkty na rogi ściany.</p>
+      <p class="hint" id="wallHint">Przesuń cztery punkty na rogi ściany.</p>
+      <button type="button" id="secondWall">Dodaj drugą ścianę</button>
     </div>
 
     <div class="step" data-step="3" hidden>
@@ -62,6 +65,9 @@
       </label>
       <label class="slider">Proporcje ściany
         <input id="aspect" type="range" min="50" max="200" value="100">
+      </label>
+      <label class="slider" id="secondWidthRow" hidden>Szerokość drugiej ściany
+        <input id="secondWidth" type="range" min="40" max="250" value="100">
       </label>
     </div>
 

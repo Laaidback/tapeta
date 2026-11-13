@@ -1,8 +1,13 @@
 // Development aid: `?demo` loads a synthetic room and wallpaper, `?demo=N`
-// also jumps to step N, `&wall=pattern` draws old wallpaper on the wall. Lets the page be checked without file pickers.
+// also jumps to step N, `&wall=pattern` draws old wallpaper on the wall,
+// `&wall=corner` two walls. Lets the page be checked without file pickers.
 const WALL = [[0.06, 0.05], [0.94, 0.10], [0.94, 0.70], [0.06, 0.78]];
+// `&wall=corner`: a darker wall on the left that meets the lit wall in a corner.
+const LEFT = [[0.04, 0.02], [0.34, 0.14], [0.34, 0.70], [0.04, 0.84]];
+const RIGHT = [[0.34, 0.14], [0.94, 0.14], [0.94, 0.70], [0.34, 0.70]];
 
-function room(patterned) {
+function room(kind) {
+  const patterned = kind === 'pattern';
   const canvas = document.createElement('canvas');
   canvas.width = 1600;
   canvas.height = 1200;
@@ -42,6 +47,15 @@ function room(patterned) {
   g.fillRect(380, 520, 760, 330);
   g.restore();
 
+  if (kind === 'corner') {
+    [[LEFT, '#a89f90'], [RIGHT, '#d8cfc0']].forEach(([quad, color]) => {
+      g.beginPath();
+      quad.forEach((corner, i) => (i ? g.lineTo(...at(corner)) : g.moveTo(...at(corner))));
+      g.closePath();
+      g.fillStyle = color;
+      g.fill();
+    });
+  }
   g.fillStyle = '#6fb0f0'; // window (sky)
   g.fillRect(1080, 220, 260, 330);
   g.fillStyle = '#2f5f8f'; // sofa
@@ -75,8 +89,10 @@ function paper() {
 
 export function start(ctx) {
   const query = new URLSearchParams(location.search);
-  ctx.useRoom(room(query.get('wall') === 'pattern'));
-  ctx.state.corners = WALL;
+  const kind = query.get('wall');
+  ctx.useRoom(room(kind));
+  ctx.state.corners = kind === 'corner' ? LEFT : WALL;
+  ctx.state.corners2 = kind === 'corner' ? RIGHT : null;
   ctx.updateReference();
   const step = Number(query.get('demo')) || 1;
   if (step >= 3) ctx.usePaper(paper());

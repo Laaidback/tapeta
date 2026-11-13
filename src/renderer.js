@@ -1,4 +1,5 @@
-import { homography, UNIT, toGL, wallAspect } from './homography.js';
+import { homography, UNIT, toGL } from './homography.js';
+import { wallSpan } from './walls.js';
 import { tileRepeat, coverScale, powerOfTwo } from './layout.js';
 import { threshold } from './color.js';
 
@@ -20,6 +21,10 @@ uniform sampler2D uMask;
 uniform sampler2D uLightMap; // smoothed wall luminance (src/light.js)
 uniform float uSmooth;       // 1: shade from uLightMap, not from the photo
 uniform mat3 uH;          // image (0..1) -> wall (0..1)
+uniform mat3 uH2;         // the same for the second wall
+uniform float uTwo;       // 1: two walls that meet in a corner
+uniform float uSplit;     // first wall's share of the total width
+uniform vec3 uRef2;       // second wall reference Y, Cb, Cr
 uniform vec4 uView;       // image rectangle inside the canvas: x, y, w, h (0..1)
 uniform vec2 uRepeat;     // tiled: repeats across, down
 uniform vec2 uCover;      // mural: visible fraction x, y
@@ -37,6 +42,15 @@ vec3 ycc(vec3 c) {
   return vec3(y, 0.5 + (c.b - y) * 0.564, 0.5 + (c.r - y) * 0.713);
 }
 
+// 1 inside the unit square. A soft side fades over a thin edge; the side
+// shared by two walls is hard and slightly widened so no gap shows.
+float cover(vec2 p, float softLeft, float softRight) {
+  float e = 0.002;
+  float left = softLeft > 0.5 ? smoothstep(0.0, e, p.x) : step(-0.0005, p.x);
+  float right = softRight > 0.5 ? smoothstep(0.0, e, 1.0 - p.x) : step(-0.0005, 1.0 - p.x);
+  return left * right * smoothstep(0.0, e, p.y) * smoothstep(0.0, e, 1.0 - p.y);
+}
+
 void main() {
   vec2 uv = (vP - uView.xy) / uView.zw;
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -46,14 +60,26 @@ void main() {
   vec3 room = texture2D(uRoom, uv).rgb;
   vec3 w = uH * vec3(uv, 1.0);
   vec2 wall = w.xy / w.z;
-  float edge = 0.002;
   // No test on the sign of w.z: it is negative across the whole quad for
   // strongly foreshortened walls, and the 0..1 range checks are sufficient.
-  float inside = smoothstep(0.0, edge, wall.x) * smoothstep(0.0, edge, 1.0 - wall.x)
-    * smoothstep(0.0, edge, wall.y) * smoothstep(0.0, edge, 1.0 - wall.y);
+  float inside = cover(wall, 1.0, 1.0 - uTwo);
+  vec3 wallRef = uRef;
+  if (uTwo > 0.5) {
+    // wall becomes a coordinate across both walls: the pattern continues
+    // around the corner.
+    if (inside > 0.0) {
+      wall.x *= uSplit;
+    } else {
+      vec3 w2 = uH2 * vec3(uv, 1.0);
+      vec2 wall2 = w2.xy / w2.z;
+      inside = cover(wall2, 0.0, 1.0);
+      wall = vec2(uSplit + wall2.x * (1.0 - uSplit), wall2.y);
+      wallRef = uRef2;
+    }
+  }
 
   vec3 c = ycc(room);
-  float d = length(c.yz - uRef.yz) + 0.25 * abs(c.x - uRef.x);
+  float d = length(c.yz - wallRef.yz) + 0.25 * abs(c.x - wallRef.x);
   float automatic = 1.0 - smoothstep(uThreshold, uThreshold + 0.03, d);
   float m = texture2D(uMask, uv).r; // 0 erase, 0.502 neutral, 1 restore
   float alpha = mix(automatic * clamp(m / 0.502, 0.0, 1.0), 1.0, clamp((m - 0.502) / 0.498, 0.0, 1.0));
@@ -70,7 +96,7 @@ void main() {
 }`;
 
 const UNIFORMS = [
-  'uRoom', 'uPaper', 'uMask', 'uLightMap', 'uSmooth', 'uH', 'uView', 'uRepeat', 'uCover', 'uTiled',
+  'uRoom', 'uPaper', 'uMask', 'uLightMap', 'uSmooth', 'uH', 'uH2', 'uTwo', 'uSplit', 'uRef2', 'uView', 'uRepeat', 'uCover', 'uTiled',
   'uPaperOn', 'uThreshold', 'uShadow', 'uBrightness', 'uRef', 'uLight', 'uBackground',
 ];
 const BACKGROUND = [0.165, 0.157, 0.149]; // #2a2826, same as --stage
@@ -179,7 +205,8 @@ export function createRenderer(canvas, onRestored) {
 
   // p: { room, corners, view, hasPaper, showOriginal, tiled, repeats,
   //      paperAspect, aspectFactor, sensitivity, shadow, brightness, ref,
-  //      patterned, light }
+  //      patterned, light, corners2, ref2, secondWidth }
+  // `corners2` (or null) is the second wall; `ref[3]` is the light of both walls.
   // `patterned` (wall with an old pattern): no automatic mask, shading from
   // the smoothed map `light`.
   // `view` is the image rectangle as fractions of the canvas.
@@ -191,7 +218,13 @@ export function createRenderer(canvas, onRestored) {
       return;
     }
     const matrix = homography(p.corners, UNIT) || [0, 0, 0, 0, 0, 0, 0, 0, 0];
-    const aspect = wallAspect(p.corners, p.room.width, p.room.height) * p.aspectFactor;
+    const span = wallSpan(p.corners, p.corners2, p.room.width, p.room.height, p.secondWidth);
+    const aspect = span.aspect * p.aspectFactor;
+    const matrix2 = (p.corners2 && homography(p.corners2, UNIT)) || [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    gl.uniformMatrix3fv(uniform.uH2, false, toGL(matrix2));
+    gl.uniform1f(uniform.uTwo, p.corners2 ? 1 : 0);
+    gl.uniform1f(uniform.uSplit, span.split);
+    gl.uniform3fv(uniform.uRef2, (p.ref2 || p.ref).slice(0, 3));
     gl.uniformMatrix3fv(uniform.uH, false, toGL(matrix));
     gl.uniform4f(uniform.uView, p.view.x, p.view.y, p.view.w, p.view.h);
     gl.uniform2fv(uniform.uRepeat, tileRepeat(p.repeats, aspect, p.paperAspect));

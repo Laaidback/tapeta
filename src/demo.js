@@ -1,8 +1,8 @@
 // Development aid: `?demo` loads a synthetic room and wallpaper, `?demo=N`
-// also jumps to step N. Lets the page be checked without file pickers.
+// also jumps to step N, `&wall=pattern` draws old wallpaper on the wall. Lets the page be checked without file pickers.
 const WALL = [[0.06, 0.05], [0.94, 0.10], [0.94, 0.70], [0.06, 0.78]];
 
-function room() {
+function room(patterned) {
   const canvas = document.createElement('canvas');
   canvas.width = 1600;
   canvas.height = 1200;
@@ -26,6 +26,18 @@ function room() {
   light.addColorStop(1, 'rgba(0,0,0,0.30)');
   g.fillStyle = light;
   g.fillRect(0, 0, canvas.width, canvas.height);
+  if (patterned) { // old wallpaper: dark stripes and dots
+    g.fillStyle = '#7a4a3a';
+    for (let x = 0; x < canvas.width; x += 90) g.fillRect(x, 0, 30, canvas.height);
+    g.fillStyle = '#3f6a5a';
+    for (let y = 30; y < canvas.height; y += 90) {
+      for (let x = 60; x < canvas.width; x += 90) {
+        g.beginPath();
+        g.arc(x, y, 16, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
   g.fillStyle = 'rgba(0,0,0,0.25)'; // sofa shadow on the wall
   g.fillRect(380, 520, 760, 330);
   g.restore();
@@ -62,10 +74,11 @@ function paper() {
 }
 
 export function start(ctx) {
-  ctx.useRoom(room());
+  const query = new URLSearchParams(location.search);
+  ctx.useRoom(room(query.get('wall') === 'pattern'));
   ctx.state.corners = WALL;
   ctx.updateReference();
-  const step = Number(new URLSearchParams(location.search).get('demo')) || 1;
+  const step = Number(query.get('demo')) || 1;
   if (step >= 3) ctx.usePaper(paper());
   ctx.goTo(Math.min(4, Math.max(1, step)));
 }

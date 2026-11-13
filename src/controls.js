@@ -38,5 +38,20 @@ export function setupControls(ctx) {
     apply();
   });
 
+  const patterned = $('patterned');
+  const showPatterned = () => {
+    $('sensitivity').disabled = state.patterned;
+    $('sensitivityRow').classList.toggle('off', state.patterned);
+    $('patternedHint').hidden = !state.patterned;
+  };
+  patterned.addEventListener('change', () => {
+    state.patterned = patterned.checked;
+    ctx.updateLight();
+    showPatterned();
+    ctx.requestDraw();
+  });
+  state.patterned = patterned.checked;
+  showPatterned();
+
   showMode();
 }

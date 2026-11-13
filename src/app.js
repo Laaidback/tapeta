@@ -3,6 +3,7 @@ import { createRenderer } from './renderer.js';
 import { fitView } from './layout.js';
 import { wallReference } from './color.js';
 import { Mask } from './mask.js';
+import { lightGrid, wallWeights, smoothLight } from './light.js';
 import { setupCorners } from './corners.js';
 import { setupControls } from './controls.js';
 import { setupPaint } from './paint.js';
@@ -29,6 +30,9 @@ const state = {
   brightness: 1,
   ref: [0.5, 0.5, 0.5, 0.5], // wall Y, Cb, Cr and the luminance of the lit wall
   mask: null,
+  patterned: false,  // the wall already has a pattern (old wallpaper)
+  lightGrid: null,   // luminance grid of the room photo
+  light: null,       // smoothed wall luminance, only when `patterned`
   fit: null,         // image rectangle in stage pixels at zoom 1
   view: null,        // current image rectangle in stage pixels
   showOriginal: false,
@@ -44,6 +48,7 @@ const renderer = createRenderer(canvas, () => {
   if (state.room) renderer.setRoom(state.room);
   if (state.mask) renderer.setMask(state.mask);
   if (state.paper) renderer.setPaper(state.paper);
+  if (state.light) renderer.setLight(state.light);
   requestDraw();
 });
 if (!renderer) $('fatal').hidden = false;
@@ -93,6 +98,15 @@ function toast(text) {
 function updateReference() {
   if (!state.roomData) return;
   state.ref = wallReference(state.roomData, state.corners) || [0.5, 0.5, 0.5, 0.5];
+  updateLight();
+}
+
+// Call after the corners, the mask or `patterned` change.
+function updateLight() {
+  if (!state.patterned || !state.roomData) return;
+  if (!state.lightGrid) state.lightGrid = lightGrid(state.roomData);
+  state.light = smoothLight(state.lightGrid, wallWeights(state.lightGrid, state.corners, state.mask));
+  renderer.setLight(state.light);
 }
 
 function canAdvance() {
@@ -129,6 +143,8 @@ function useRoom(image) {
   state.roomData = image.getContext('2d', { willReadFrequently: true })
     .getImageData(0, 0, image.width, image.height);
   state.mask = new Mask(image.width, image.height);
+  state.lightGrid = null;
+  state.light = null;
   state.corners = DEFAULT_CORNERS;
   renderer.setRoom(image);
   renderer.setMask(state.mask);
@@ -165,6 +181,7 @@ const ctx = {
   requestDraw,
   toast,
   updateReference,
+  updateLight,
   updateUi,
   goTo,
   useRoom,

@@ -99,6 +99,8 @@ export function setupPaint(ctx) {
     if (stroke) {
       state.mask.end();
       stroke = null;
+      ctx.updateLight();
+      ctx.requestDraw();
       showUndo();
     }
     pinch = pointers.size === 2 ? pinchState() : null; // third finger lifted: restart from the two left
@@ -125,6 +127,8 @@ export function setupPaint(ctx) {
   $('brush').addEventListener('input', (event) => { state.brush = Number(event.target.value) / 100; });
   $('undo').addEventListener('click', () => {
     upload(state.mask.undo());
+    ctx.updateLight();
+    ctx.requestDraw();
     showUndo();
   });
 

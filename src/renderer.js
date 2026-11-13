@@ -17,6 +17,8 @@ varying vec2 vP;
 uniform sampler2D uRoom;
 uniform sampler2D uPaper;
 uniform sampler2D uMask;
+uniform sampler2D uLightMap; // smoothed wall luminance (src/light.js)
+uniform float uSmooth;       // 1: shade from uLightMap, not from the photo
 uniform mat3 uH;          // image (0..1) -> wall (0..1)
 uniform vec4 uView;       // image rectangle inside the canvas: x, y, w, h (0..1)
 uniform vec2 uRepeat;     // tiled: repeats across, down
@@ -61,13 +63,14 @@ void main() {
     ? wall * uRepeat
     : clamp((wall - 0.5) * uCover + 0.5, 0.002, 0.998); // REPEAT would bleed the opposite edge
   vec3 paper = texture2D(uPaper, paperUv).rgb;
-  float shade = clamp(mix(1.0, c.x / max(uLight, 0.05), uShadow), 0.2, 1.2);
+  float lit = mix(c.x, texture2D(uLightMap, uv).r, uSmooth);
+  float shade = clamp(mix(1.0, lit / max(uLight, 0.05), uShadow), 0.2, 1.2);
   vec3 covered = clamp(paper * uBrightness * shade, 0.0, 1.0);
   gl_FragColor = vec4(mix(room, covered, alpha), 1.0);
 }`;
 
 const UNIFORMS = [
-  'uRoom', 'uPaper', 'uMask', 'uH', 'uView', 'uRepeat', 'uCover', 'uTiled',
+  'uRoom', 'uPaper', 'uMask', 'uLightMap', 'uSmooth', 'uH', 'uView', 'uRepeat', 'uCover', 'uTiled',
   'uPaperOn', 'uThreshold', 'uShadow', 'uBrightness', 'uRef', 'uLight', 'uBackground',
 ];
 const BACKGROUND = [0.165, 0.157, 0.149]; // #2a2826, same as --stage
@@ -105,14 +108,18 @@ export function createRenderer(canvas, onRestored) {
 
     uniform = {};
     UNIFORMS.forEach((name) => { uniform[name] = gl.getUniformLocation(program, name); });
-    textures = { room: gl.createTexture(), paper: gl.createTexture(), mask: gl.createTexture() };
+    textures = {
+      room: gl.createTexture(), paper: gl.createTexture(), mask: gl.createTexture(), light: gl.createTexture(),
+    };
     gl.uniform1i(uniform.uRoom, 0);
     gl.uniform1i(uniform.uPaper, 1);
     gl.uniform1i(uniform.uMask, 2);
+    gl.uniform1i(uniform.uLightMap, 3);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     // 1x1 placeholder so drawing without a wallpaper does not sample an unbound texture.
     bind(1, textures.paper);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
+    setLight({ data: new Uint8Array([128]), width: 1, height: 1 });
   }
 
   function bind(unit, texture) {
@@ -154,6 +161,13 @@ export function createRenderer(canvas, onRestored) {
     clampLinear();
   }
 
+  // map: { data: Uint8Array, width, height } from smoothLight().
+  function setLight(map) {
+    bind(3, textures.light);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, map.width, map.height, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, map.data);
+    clampLinear();
+  }
+
   // Uploads only the changed rectangle ({ x0, y0, x1, y1 }, inclusive).
   function updateMask(mask, rect) {
     bind(2, textures.mask);
@@ -164,7 +178,10 @@ export function createRenderer(canvas, onRestored) {
   }
 
   // p: { room, corners, view, hasPaper, showOriginal, tiled, repeats,
-  //      paperAspect, aspectFactor, sensitivity, shadow, brightness, ref }
+  //      paperAspect, aspectFactor, sensitivity, shadow, brightness, ref,
+  //      patterned, light }
+  // `patterned` (wall with an old pattern): no automatic mask, shading from
+  // the smoothed map `light`.
   // `view` is the image rectangle as fractions of the canvas.
   function draw(p) {
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -181,11 +198,13 @@ export function createRenderer(canvas, onRestored) {
     gl.uniform2fv(uniform.uCover, coverScale(aspect, p.paperAspect));
     gl.uniform1f(uniform.uTiled, p.tiled ? 1 : 0);
     gl.uniform1f(uniform.uPaperOn, p.hasPaper && !p.showOriginal ? 1 : 0);
-    gl.uniform1f(uniform.uThreshold, threshold(p.sensitivity));
+    const smooth = !!(p.patterned && p.light);
+    gl.uniform1f(uniform.uThreshold, threshold(smooth ? 0 : p.sensitivity));
+    gl.uniform1f(uniform.uSmooth, smooth ? 1 : 0);
     gl.uniform1f(uniform.uShadow, p.shadow);
     gl.uniform1f(uniform.uBrightness, p.brightness);
     gl.uniform3fv(uniform.uRef, p.ref.slice(0, 3));
-    gl.uniform1f(uniform.uLight, p.ref[3]);
+    gl.uniform1f(uniform.uLight, smooth ? p.light.light : p.ref[3]);
     gl.uniform3fv(uniform.uBackground, BACKGROUND);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
@@ -210,5 +229,5 @@ export function createRenderer(canvas, onRestored) {
   canvas.addEventListener('webglcontextrestored', () => { init(); onRestored(); });
 
   init();
-  return { setRoom, setPaper, setMask, updateMask, draw, exportCanvas };
+  return { setRoom, setPaper, setMask, updateMask, setLight, draw, exportCanvas };
 }

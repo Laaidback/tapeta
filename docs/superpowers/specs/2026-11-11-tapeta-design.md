@@ -167,3 +167,14 @@ pociągnięciem). Zmiana rogów ściany nie kasuje maski ręcznej.
 „Dotknij mebel”: segmentacja modelem w przeglądarce (MediaPipe Interactive Segmenter).
 Dopiero po sprawdzeniu, czy maska po kolorze i mądra gumka wystarczają na prawdziwych
 zdjęciach od klientów.
+
+## Ściana ze wzorem (2026-11-13)
+
+Na ścianie ze starą tapetą automatyczna maska koloru robi dziury, a cieniowanie z luminancji zdjęcia przebija stary wzór przez nową tapetę. Przełącznik „Ściana ma wzór (stara tapeta)” w kroku „Tapeta” (domyślnie wyłączony):
+
+- wyłącza automatyczną maskę (suwak „Czułość” nieaktywny); meble wymazuje się gumką w kroku „Popraw”,
+- cieniowanie bierze jasność z rozmytej mapy (`src/light.js`): siatka 96 komórek na dłuższym boku, rozmycie pudełkowe o promieniu 4 komórek, 3 przebiegi, ważone — komórki poza czworokątem ściany i wymazane w masce nie wchodzą do średniej, więc wymazany mebel nie zostawia ciemnej poświaty,
+- jasność oświetlonej ściany (`uLight`) to 90. percentyl tej mapy,
+- mapa liczy się ponownie po zmianie rogów, po każdym pociągnięciu gumki i po „Cofnij”.
+
+Demo: `?demo=3&wall=pattern`.

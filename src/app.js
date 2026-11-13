@@ -42,6 +42,9 @@ const state = {
   tool: 'erase',
   smart: true,
   brush: 0.04,       // brush radius as a fraction of the photo's longer side
+  hover: null,       // brush preview under the mouse (see paint.js)
+  polygon: [],       // points of the shape being drawn (normalized image coordinates)
+  polygonDone: false, // a shape was just cut: show the result
 };
 
 const drawHooks = [];
@@ -63,6 +66,9 @@ function params() {
   return {
     ...state,
     hasPaper: !!state.paper,
+    // The wallpaper is hidden while a shape is drawn, so the furniture is visible.
+    showOriginal: state.showOriginal
+      || (state.step === 4 && state.tool === 'polygon' && !state.polygonDone),
     view: v ? { x: v.x / w, y: v.y / h, w: v.w / w, h: v.h / h } : null,
   };
 }

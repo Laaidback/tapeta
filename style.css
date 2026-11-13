@@ -45,6 +45,11 @@ header { padding: calc(8px + env(safe-area-inset-top)) 12px 8px; }
   touch-action: none;
 }
 #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#shape { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#shapeFill { fill: rgba(230, 60, 60, 0.25); stroke: #fff; stroke-width: 2; stroke-dasharray: 6 4; }
+#shapeDots circle { fill: #fff; stroke: #2a2826; stroke-width: 2; }
+#shapeDots circle.first { fill: #e04a3a; stroke: #fff; stroke-width: 3; }
+.group { display: flex; flex-direction: column; gap: 10px; }
 #outline { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #seam { stroke: #fff; stroke-width: 2; stroke-dasharray: 6 4; }
 #quad { fill: rgba(255, 255, 255, 0.08); stroke: #fff; stroke-width: 2; stroke-dasharray: 6 4; }

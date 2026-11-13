@@ -93,3 +93,36 @@ test('similarFilter agrees with color.distance', () => {
     assert.equal(filter(i), distance(ycbcr(...p), ref) < 0.08, `pixel ${i}`);
   });
 });
+
+test('fill: a rectangle polygon sets exactly its pixels and can be undone', () => {
+  const mask = new Mask(10, 10);
+  mask.begin();
+  const rect = mask.fill([[2, 3], [6, 3], [6, 7], [2, 7]], ERASE);
+  mask.end();
+  assert.deepEqual(rect, { x0: 2, y0: 3, x1: 5, y1: 6 });
+  assert.equal(mask.data.filter((value) => value === ERASE).length, 16);
+  assert.equal(mask.data[3 * 10 + 2], ERASE);
+  assert.equal(mask.data[3 * 10 + 6], NEUTRAL);
+  mask.undo();
+  assert.ok(mask.data.every((value) => value === NEUTRAL));
+});
+
+test('fill: a concave shape leaves its notch untouched', () => {
+  const mask = new Mask(12, 12);
+  mask.begin();
+  // "U" shape: the notch between x 4..8 above y 6 stays neutral.
+  mask.fill([[0, 0], [4, 0], [4, 6], [8, 6], [8, 0], [12, 0], [12, 12], [0, 12]], ERASE);
+  mask.end();
+  assert.equal(mask.data[2 * 12 + 6], NEUTRAL);
+  assert.equal(mask.data[2 * 12 + 2], ERASE);
+  assert.equal(mask.data[2 * 12 + 10], ERASE);
+  assert.equal(mask.data[9 * 12 + 6], ERASE);
+});
+
+test('fill: clips to the mask and returns null when fully outside', () => {
+  const mask = new Mask(8, 8);
+  mask.begin();
+  assert.deepEqual(mask.fill([[-5, -5], [3, -5], [3, 3], [-5, 3]], ERASE), { x0: 0, y0: 0, x1: 2, y1: 2 });
+  assert.equal(mask.fill([[20, 20], [30, 20], [30, 30]], ERASE), null);
+  mask.end();
+});

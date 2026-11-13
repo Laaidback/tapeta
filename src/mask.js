@@ -66,6 +66,36 @@ export class Mask {
     return rect;
   }
 
+  // Fills a polygon (points in mask pixels, even-odd rule) with `value`.
+  // Returns the touched rectangle, or null when nothing was filled.
+  fill(points, value) {
+    let top = Infinity, bottom = -Infinity;
+    points.forEach(([, y]) => { top = Math.min(top, y); bottom = Math.max(bottom, y); });
+    const y0 = Math.max(0, Math.ceil(top - 0.5));
+    const y1 = Math.min(this.height - 1, Math.floor(bottom - 0.5));
+    let rect = null;
+    for (let y = y0; y <= y1; y++) {
+      const center = y + 0.5;
+      const crossings = [];
+      for (let i = 0; i < points.length; i++) {
+        const [ax, ay] = points[i];
+        const [bx, by] = points[(i + 1) % points.length];
+        if ((ay <= center) === (by <= center)) continue;
+        crossings.push(ax + ((center - ay) / (by - ay)) * (bx - ax));
+      }
+      crossings.sort((a, b) => a - b);
+      for (let i = 0; i + 1 < crossings.length; i += 2) {
+        const x0 = Math.max(0, Math.ceil(crossings[i] - 0.5));
+        const x1 = Math.min(this.width - 1, Math.floor(crossings[i + 1] - 0.5));
+        if (x0 > x1) continue;
+        this.data.fill(value, y * this.width + x0, y * this.width + x1 + 1);
+        rect = union(rect, { x0, y0: y, x1, y1: y });
+      }
+    }
+    this.dirty = union(this.dirty, rect);
+    return rect;
+  }
+
   // Finishes the stroke. Returns its rectangle, or null when nothing was drawn.
   end() {
     const rect = this.dirty;

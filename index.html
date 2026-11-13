@@ -18,6 +18,7 @@
 
   <main id="stage">
     <canvas id="view"></canvas>
+    <svg id="shape" hidden><polygon id="shapeFill"></polygon><g id="shapeDots"></g></svg>
     <svg id="outline" hidden><polygon id="quad"></polygon><line id="seam"></line></svg>
     <div class="handle" hidden></div>
     <div class="handle" hidden></div>
@@ -72,16 +73,26 @@
     </div>
 
     <div class="step" data-step="4" hidden>
-      <p class="hint">Jeden palec maluje. Dwa palce przesuwają i powiększają.</p>
+      <p class="hint" id="paintHint">Jeden palec maluje. Dwa palce przesuwają i powiększają.</p>
       <div class="segmented" id="tool">
         <button type="button" data-tool="erase" class="on">Gumka</button>
         <button type="button" data-tool="restore">Pędzel</button>
+        <button type="button" data-tool="polygon">Wielokąt</button>
         <button type="button" id="undo" disabled>Cofnij</button>
       </div>
-      <label class="check"><input id="smart" type="checkbox" checked> Mądra gumka (zatrzymuje się na krawędzi)</label>
-      <label class="slider">Rozmiar
-        <input id="brush" type="range" min="1" max="10" value="4">
-      </label>
+      <div id="brushTools" class="group">
+        <label class="check"><input id="smart" type="checkbox" checked> Mądra gumka (zatrzymuje się na krawędzi)</label>
+        <label class="slider">Rozmiar
+          <input id="brush" type="range" min="1" max="10" value="4">
+        </label>
+      </div>
+      <div id="polygonTools" class="group" hidden>
+        <p class="hint">Dotykaj kolejne rogi mebla. Punkty można przesuwać. Dotknij pierwszy punkt albo „Wytnij”.</p>
+        <div class="segmented">
+          <button type="button" id="cut" class="primary" disabled>Wytnij</button>
+          <button type="button" id="clearShape" disabled>Wyczyść punkty</button>
+        </div>
+      </div>
     </div>
 
     <div id="output" hidden>

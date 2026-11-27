@@ -8,6 +8,7 @@ const $ = (id) => document.getElementById(id);
 const TAP_SLOP = 8;   // CSS pixels a finger may move and still count as a tap
 const GROW = 0.002;   // act this fraction of the longer side past the outline
 const START = 'Dotknij mebel albo przedmiot. Kolejne dotknięcia dodają do zaznaczenia.';
+const UNDO_TIP = ' Dotknij zaznaczone miejsce, żeby je odznaczyć.';
 
 // Slider 1..30 -> color distance limit (see color.distance).
 const limitFor = (value) => 0.01 * value;
@@ -19,6 +20,7 @@ export function setupObject(ctx, done) {
   const status = $('objectStatus');
   const tolerance = $('tolerance');
   let taps = [];        // photo pixels [x, y]
+  let regions = [];     // selection of each tap, same order
   let selection = null; // Uint8Array at photo resolution
   let press = null;     // { x, y, moved }
 
@@ -50,16 +52,18 @@ export function setupObject(ctx, done) {
   // Selection from all taps at the current tolerance.
   function select() {
     selection = null;
+    regions = [];
     let share = 0;
     taps.forEach(([x, y]) => {
       const region = colorRegion(state.roomData, x, y, limitFor(Number(tolerance.value)));
+      regions.push(region.data);
       selection = mergeSelection(selection, region.data);
       share = Math.max(share, region.share);
     });
     if (selection) paint();
     status.textContent = !selection ? START
-      : share > 0.5 ? 'Zaznaczyło się za dużo. Przesuń „Dokładność koloru” w lewo.'
-        : 'Za mało? Przesuń „Dokładność koloru” w prawo albo dotknij kolejną część.';
+      : share > 0.5 ? `Zaznaczyło się za dużo.${UNDO_TIP} Albo przesuń „Dokładność koloru” w lewo.`
+        : `Za mało? Przesuń „Dokładność koloru” w prawo albo dotknij kolejną część.${UNDO_TIP}`;
     ['cutObject', 'addObject', 'clearObject'].forEach((id) => { $(id).disabled = !selection; });
     ctx.requestDraw();
   }
@@ -109,7 +113,13 @@ export function setupObject(ctx, done) {
       if (moved) return;
       const [u, v] = ctx.toImage(event.clientX, event.clientY);
       if (u < 0 || u >= 1 || v < 0 || v >= 1) return;
-      taps.push([u * state.room.width, v * state.room.height]);
+      const x = Math.floor(u * state.room.width);
+      const y = Math.floor(v * state.room.height);
+      const index = y * state.room.width + x;
+      // A tap on a selected place takes back the latest tap that selected it.
+      const hit = regions.findLastIndex((region) => region[index]);
+      if (hit >= 0) taps.splice(hit, 1);
+      else taps.push([x, y]);
       select();
     },
     cancel() { press = null; },

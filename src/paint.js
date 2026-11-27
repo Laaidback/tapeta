@@ -181,6 +181,10 @@ export function setupPaint(ctx) {
       polygon.reset();
     });
   });
+  $('coverage').addEventListener('change', (event) => {
+    state.coverage = event.target.checked;
+    ctx.requestDraw();
+  });
   $('smart').addEventListener('change', (event) => { state.smart = event.target.checked; });
   $('brush').addEventListener('input', (event) => { state.brush = Number(event.target.value) / 100; });
   $('undo').addEventListener('click', () => {

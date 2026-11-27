@@ -195,3 +195,7 @@ Poza zakresem: ściany, które się nie stykają; więcej niż jeden narożnik. 
 
 - Podgląd pod kursorem (mysz, pióro; dotyk nie ma najechania): w kroku „Popraw” shader rysuje okrąg pędzla i barwi piksele, które zmieni naciśnięcie — czerwono dla gumki, zielono dla pędzla. Przy mądrej gumce barwi tylko piksele podobne do koloru pod kursorem (ten sam test co `similarFilter`). Stan `state.hover`, nie trafia do zapisu.
 - Narzędzie „Wielokąt” (`src/polygon.js`): dotknięcie stawia punkt, punkt można przeciągnąć, dotknięcie pierwszego punktu albo „Wytnij” wycina kształt z tapety (`Mask.fill`, reguła parzystości), „Wyczyść punkty” zaczyna od nowa. Tapeta jest ukryta, gdy narzędzie jest wybrane; po wycięciu widać wynik do następnego dotknięcia. Wycięcie cofa „Cofnij”. Dwa palce dalej przesuwają i powiększają.
+
+## Zasięg tapety (2026-11-27)
+
+Przełącznik „Pokaż, gdzie jest tapeta (na zielono)” przy gumce i pędzlu w kroku „Popraw” (domyślnie wyłączony). Zamiast tapety widać zdjęcie pokoju, a obszar z tapetą jest zabarwiony na zielono (`uCoverage`). Widać więc jednocześnie meble pod spodem i granicę tapety. Nie trafia do zapisanego zdjęcia.

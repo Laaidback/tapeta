@@ -37,6 +37,7 @@ uniform vec3 uRef;        // wall reference Y, Cb, Cr
 uniform float uLight;     // luminance of the lit wall
 uniform vec3 uBackground;
 uniform vec2 uRoomSize;   // room photo size in pixels
+uniform float uCoverage;  // 1: room photo with the wallpaper area tinted
 uniform float uHoverOn;   // 1: show what the brush under the cursor would change
 uniform vec4 uHover;      // center u, v; radius and one screen pixel, in photo pixels
 uniform float uHoverSmart;
@@ -99,6 +100,7 @@ void main() {
   float shade = clamp(mix(1.0, lit / max(uLight, 0.05), uShadow), 0.2, 1.2);
   vec3 covered = clamp(paper * uBrightness * shade, 0.0, 1.0);
   vec3 color = mix(room, covered, alpha);
+  if (uCoverage > 0.5) color = mix(room, vec3(0.1, 0.75, 0.45), 0.55 * alpha);
   if (uHoverOn > 0.5) {
     float reach = length((uv - uHover.xy) * uRoomSize);
     if (reach < uHover.z) {
@@ -116,7 +118,7 @@ void main() {
 const UNIFORMS = [
   'uRoom', 'uPaper', 'uMask', 'uLightMap', 'uSmooth', 'uH', 'uH2', 'uTwo', 'uSplit', 'uRef2', 'uView', 'uRepeat', 'uCover', 'uTiled',
   'uPaperOn', 'uThreshold', 'uShadow', 'uBrightness', 'uRef', 'uLight', 'uBackground',
-  'uRoomSize', 'uHoverOn', 'uHover', 'uHoverSmart', 'uHoverRef', 'uHoverColor',
+  'uRoomSize', 'uCoverage', 'uHoverOn', 'uHover', 'uHoverSmart', 'uHoverRef', 'uHoverColor',
 ];
 const BACKGROUND = [0.165, 0.157, 0.149]; // #2a2826, same as --stage
 
@@ -260,6 +262,7 @@ export function createRenderer(canvas, onRestored) {
     gl.uniform1f(uniform.uLight, smooth ? p.light.light : p.ref[3]);
     gl.uniform3fv(uniform.uBackground, BACKGROUND);
     gl.uniform2f(uniform.uRoomSize, p.room.width, p.room.height);
+    gl.uniform1f(uniform.uCoverage, p.coverage ? 1 : 0);
     gl.uniform1f(uniform.uHoverOn, p.hover ? 1 : 0);
     if (p.hover) {
       gl.uniform4f(uniform.uHover, p.hover.u, p.hover.v, p.hover.radius, p.hover.pixel);
@@ -275,7 +278,7 @@ export function createRenderer(canvas, onRestored) {
     const { width, height } = canvas;
     canvas.width = p.room.width;
     canvas.height = p.room.height;
-    draw({ ...p, view: { x: 0, y: 0, w: 1, h: 1 }, showOriginal: false, hover: null });
+    draw({ ...p, view: { x: 0, y: 0, w: 1, h: 1 }, showOriginal: false, hover: null, coverage: false });
     const out = document.createElement('canvas');
     out.width = p.room.width;
     out.height = p.room.height;

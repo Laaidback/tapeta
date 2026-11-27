@@ -2,11 +2,10 @@
 // similar color around the tap is selected (a magic wand). "Wytnij" removes
 // the wallpaper from the selection, "Dodaj tapetę" puts it there.
 import { ERASE, RESTORE } from './mask.js';
-import { colorRegion, mergeSelection, growSelection } from './selection.js';
+import { colorRegion, mergeSelection } from './selection.js';
 
 const $ = (id) => document.getElementById(id);
 const TAP_SLOP = 8;   // CSS pixels a finger may move and still count as a tap
-const GROW = 0.002;   // act this fraction of the longer side past the outline
 const START = 'Dotknij mebel albo przedmiot. Kolejne dotknięcia dodają do zaznaczenia.';
 const UNDO_TIP = ' Dotknij zaznaczone miejsce, żeby je odznaczyć.';
 
@@ -77,9 +76,8 @@ export function setupObject(ctx, done) {
   function apply(value) {
     if (!selection) return;
     const { width, height } = state.room;
-    const grown = growSelection(selection, width, height, Math.round(GROW * Math.max(width, height)));
     state.mask.begin();
-    const rect = state.mask.stamp(grown, width, height, value);
+    const rect = state.mask.stamp(selection, width, height, value); // exactly what is highlighted
     state.mask.end();
     state.polygonDone = true; // show the result until the next touch
     reset();

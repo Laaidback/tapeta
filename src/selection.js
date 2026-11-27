@@ -30,6 +30,45 @@ export function objectAt(category, width, height, u, v) {
   return { data, share: count / data.length };
 }
 
+// Splits the inside of the wall quads into wall and not-wall from the model's
+// answers. `runs` is one entry per wall: { category, u, v, corners } — the
+// category mask for the seed point (u, v) inside that wall's quad `corners`
+// (normalized). `inside(corners, x, y)` tests a point against a quad.
+// Returns { wall, other, share }: two selections and the wall's share of the
+// quads' area. `other` is grown by `grow` pixels so the wallpaper keeps off
+// the edges of furniture.
+export function wallSelection(runs, width, height, inside, grow = 0) {
+  const wall = new Uint8Array(width * height);
+  const quads = new Uint8Array(width * height);
+  runs.forEach(({ category, u, v, corners }) => {
+    const sx = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
+    const sy = Math.min(height - 1, Math.max(0, Math.floor(v * height)));
+    const wanted = category[sy * width + sx];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!inside(corners, (x + 0.5) / width, (y + 0.5) / height)) continue;
+        const index = y * width + x;
+        quads[index] = 1;
+        if (category[index] === wanted) wall[index] = 1;
+      }
+    }
+  });
+  let other = new Uint8Array(width * height);
+  let area = 0;
+  for (let i = 0; i < other.length; i++) {
+    if (!quads[i]) continue;
+    area++;
+    if (!wall[i]) other[i] = 1;
+  }
+  other = growSelection(other, width, height, grow);
+  let count = 0;
+  for (let i = 0; i < wall.length; i++) {
+    if (other[i]) wall[i] = 0;
+    count += wall[i];
+  }
+  return { wall, other, share: area ? count / area : 0 };
+}
+
 // Union of two selections of the same size; `a` may be null.
 export function mergeSelection(a, b) {
   if (!a) return b;

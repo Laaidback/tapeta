@@ -205,3 +205,11 @@ Przełącznik „Pokaż, gdzie jest tapeta (na zielono)” przy gumce i pędzlu 
 - Krok „Ściana”: zdjęcie rysuje się w 70% wielkości (`shrinkView`, `WALL_STEP_SCALE`), z miejscem dookoła. Punkty można wynieść poza zdjęcie (zakres −1…2), gdy róg ściany jest ucięty. Tapeta rysuje się tylko na zdjęciu.
 - Narzędzie „Obiekt” (`src/object.js`, czyste funkcje w `src/selection.js`): dotknięcie przedmiotu uruchamia MediaPipe Interactive Segmenter (model „magic touch”). Biblioteka `@mediapipe/tasks-vision` 0.10.14 z jsDelivr i model z `storage.googleapis.com` pobierają się przy pierwszym użyciu; zdjęcie zostaje w przeglądarce. Zaznaczenie to spójny obszar wokół dotkniętego punktu; kolejne dotknięcia dodają. Wynik większy niż 60% zdjęcia jest odrzucany. „Wytnij” powiększa zaznaczenie o 0,3% dłuższego boku i wycina je z tapety (`Mask.stamp`), „Odznacz” czyści. Tapeta jest ukryta jak przy wielokącie.
 - Pasek narzędzi zawija się: Gumka, Pędzel, Wielokąt, Obiekt, pod spodem „Cofnij”.
+
+## Rozpoznawanie ściany modelem (2026-11-27)
+
+Przycisk „Rozpoznaj ścianę automatycznie” w kroku „Tapeta”. Dla każdej zaznaczonej ściany `wallSeed` (color.js) wybiera punkt o kolorze najbliższym kolorowi odniesienia ściany, a model z `src/segmenter.js` zwraca obszar należący do tego punktu. `wallSelection` (selection.js) dzieli wnętrze czworokąta na ścianę i resztę; reszta rośnie o 0,2% dłuższego boku. Maska dostaje „przywróć” na ścianie i „wymaż” na reszcie, jako jeden krok „Cofnij”. Poprawki gumką i pędzlem.
+
+Bezpieczniki: ściana poniżej 10% czworokąta — komunikat o niepowodzeniu; powyżej 97% — „Nie znalazłem mebli”, maska bez zmian.
+
+Stan: na sztucznym pokoju model uznaje cały czworokąt za ścianę (bezpiecznik 97%). Jakość na prawdziwych zdjęciach nie sprawdzona.

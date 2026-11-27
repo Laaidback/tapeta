@@ -1,40 +1,13 @@
 // "Obiekt" tool of the "Popraw" step: tap a piece of furniture, a model finds
-// its outline, "Wytnij" removes the wallpaper from it. The model (MediaPipe
-// Interactive Segmenter) runs in the browser; the photo is not sent anywhere.
-// The library and the model are downloaded on first use.
+// its outline, "Wytnij" removes the wallpaper from it (see segmenter.js).
 import { ERASE } from './mask.js';
+import { segmentAt } from './segmenter.js';
 import { objectAt, mergeSelection, growSelection } from './selection.js';
 
 const $ = (id) => document.getElementById(id);
-const VERSION = '0.10.14';
-const BUNDLE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/vision_bundle.mjs`;
-const WASM = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VERSION}/wasm`;
-const MODEL = 'https://storage.googleapis.com/mediapipe-models/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite';
 const TAP_SLOP = 8;     // CSS pixels a finger may move and still count as a tap
 const MAX_SHARE = 0.6;  // a "selection" larger than this is the background
 const GROW = 0.003;     // cut this fraction of the longer side past the outline
-
-let loading = null;
-function loadSegmenter() {
-  if (!loading) {
-    loading = (async () => {
-      const { FilesetResolver, InteractiveSegmenter } = await import(BUNDLE);
-      const files = await FilesetResolver.forVisionTasks(WASM);
-      const create = (delegate) => InteractiveSegmenter.createFromOptions(files, {
-        baseOptions: { modelAssetPath: MODEL, delegate },
-        outputCategoryMask: true,
-        outputConfidenceMasks: false,
-      });
-      try {
-        return await create('GPU');
-      } catch {
-        return create('CPU');
-      }
-    })();
-    loading.catch(() => { loading = null; }); // allow a retry
-  }
-  return loading;
-}
 
 // `done(rect)` runs after a cut with the changed mask rectangle.
 export function setupObject(ctx, done) {
@@ -87,14 +60,10 @@ export function setupObject(ctx, done) {
     busy = true;
     showUi('Szukam obiektu… Pierwszy raz trwa dłużej (pobieranie).');
     try {
-      const segmenter = await loadSegmenter();
-      let found = null;
-      segmenter.segment(state.room, { keypoint: { x: u, y: v } }, (result) => {
-        const mask = result.categoryMask; // valid only inside this callback
-        found = { ...objectAt(mask.getAsUint8Array(), mask.width, mask.height, u, v), width: mask.width, height: mask.height };
-      });
+      const mask = await segmentAt(state.room, u, v);
+      const found = { ...objectAt(mask.data, mask.width, mask.height, u, v), width: mask.width, height: mask.height };
       if (!on()) return;
-      if (!found || found.share > MAX_SHARE) {
+      if (found.share > MAX_SHARE) {
         showUi('Nie udało się złapać obiektu. Dotknij w innym miejscu albo użyj wielokąta.');
       } else {
         const same = selection && selection.width === found.width && selection.height === found.height;

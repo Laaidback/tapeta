@@ -1,4 +1,14 @@
+import { wallSeed } from './color.js';
+import { insideQuad } from './light.js';
+import { ERASE, RESTORE } from './mask.js';
+import { segmentAt } from './segmenter.js';
+import { wallSelection } from './selection.js';
+
 const $ = (id) => document.getElementById(id);
+const MIN_WALL_SHARE = 0.1; // less of the quad than this: the model missed the wall
+const MAX_WALL_SHARE = 0.97; // more than this: the model found nothing but wall
+const EDGE = 0.002;         // keep the wallpaper this fraction of the longer side off furniture
+
 
 export function setupControls(ctx) {
   const { state } = ctx;
@@ -53,6 +63,49 @@ export function setupControls(ctx) {
   });
   state.patterned = patterned.checked;
   showPatterned();
+
+  // Asks the model which part of the marked wall is bare wall and puts the
+  // wallpaper only there. One undo step; eraser and brush refine it.
+  const find = $('findWall');
+  find.addEventListener('click', async () => {
+    if (!state.room) return;
+    find.disabled = true;
+    find.textContent = 'Szukam ściany…';
+    try {
+      const walls = [[state.corners, state.ref], [state.corners2, state.ref2]].filter(([corners]) => corners);
+      const runs = [];
+      let size = null;
+      for (const [corners, ref] of walls) {
+        const seed = wallSeed(state.roomData, corners, ref || state.ref);
+        if (!seed) continue;
+        const mask = await segmentAt(state.room, seed[0], seed[1]);
+        size = mask;
+        runs.push({ category: mask.data, u: seed[0], v: seed[1], corners });
+      }
+      const grow = size ? Math.round(EDGE * Math.max(size.width, size.height)) : 0;
+      const found = size ? wallSelection(runs, size.width, size.height, insideQuad, grow) : null;
+      if (!found || found.share < MIN_WALL_SHARE) {
+        ctx.toast('Nie udało się rozpoznać ściany. Użyj suwaka „Czułość” albo gumki.');
+      } else if (found.share > MAX_WALL_SHARE) {
+        // Nothing to take the wallpaper off: leave the mask as it is.
+        ctx.toast('Nie znalazłem mebli na ścianie. Nic nie zmieniłem.');
+      } else {
+        state.mask.begin();
+        state.mask.stamp(found.other, size.width, size.height, ERASE);
+        state.mask.stamp(found.wall, size.width, size.height, RESTORE);
+        state.mask.end();
+        ctx.renderer.setMask(state.mask);
+        ctx.updateLight();
+        ctx.toast('Ściana rozpoznana. Popraw gumką i pędzlem w kroku „Popraw”.');
+      }
+    } catch {
+      ctx.toast('Nie udało się wczytać rozpoznawania. Sprawdź internet i spróbuj ponownie.');
+    } finally {
+      find.disabled = false;
+      find.textContent = 'Rozpoznaj ścianę automatycznie';
+      ctx.requestDraw();
+    }
+  });
 
   showMode();
 }

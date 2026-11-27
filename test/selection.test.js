@@ -41,3 +41,26 @@ test('growSelection: grows by the radius in every direction', () => {
   assert.equal(grown[6], 1);
   assert.equal(growSelection(data, 5, 5, 0), data);
 });
+
+test('wallSelection: wall and not-wall inside the quad only', async () => {
+  const { wallSelection } = await import('../src/selection.js');
+  // 4x2: left half is the quad; category 3 under the seed, 9 is furniture.
+  const category = new Uint8Array([
+    3, 9, 3, 3,
+    3, 3, 9, 9,
+  ]);
+  const inside = (corners, x) => x < corners;
+  const found = wallSelection([{ category, u: 0.1, v: 0.1, corners: 0.5 }], 4, 2, inside);
+  assert.deepEqual([...found.wall], [1, 0, 0, 0, 1, 1, 0, 0]);
+  assert.deepEqual([...found.other], [0, 1, 0, 0, 0, 0, 0, 0]);
+  assert.equal(found.share, 0.75);
+});
+
+test('wallSelection: growing the furniture takes wall away', async () => {
+  const { wallSelection } = await import('../src/selection.js');
+  const category = new Uint8Array(25).fill(1);
+  category[12] = 2;
+  const found = wallSelection([{ category, u: 0, v: 0, corners: null }], 5, 5, () => true, 1);
+  assert.equal(found.other.filter((value) => value).length, 9);
+  assert.equal(found.wall.filter((value) => value).length, 16);
+});

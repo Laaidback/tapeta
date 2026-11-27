@@ -72,18 +72,6 @@ test('threshold: 0 disables, higher sensitivity gives a lower threshold', () => 
   assert.ok(threshold(0.8) < threshold(0.2));
 });
 
-test('wallSeed: picks a point with the wall color, not the furniture in the middle', async () => {
-  const { wallSeed } = await import('../src/color.js');
-  const image = solidImage(100, 100, [200, 190, 170]);
-  for (let y = 30; y < 70; y++) {
-    for (let x = 30; x < 70; x++) image.data.set([40, 60, 140, 255], (y * 100 + x) * 4);
-  }
-  const corners = [[0, 0], [1, 0], [1, 1], [0, 1]];
-  const [u, v] = wallSeed(image, corners, ycbcr(200, 190, 170));
-  assert.ok(u < 0.3 || u >= 0.7 || v < 0.3 || v >= 0.7);
-  assert.equal(wallSeed(image, [[2, 2], [3, 2], [3, 3], [2, 3]], ycbcr(0, 0, 0)), null);
-});
-
 test('patchColor: one odd pixel under the finger does not set the color', async () => {
   const { patchColor } = await import('../src/color.js');
   const image = solidImage(20, 20, [40, 60, 140]);

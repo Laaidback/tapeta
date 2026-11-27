@@ -66,29 +66,6 @@ export function wallReference(image, corners, grid = 32) {
   return [median(ys), median(cbs), median(crs), percentile(ys, 0.9)];
 }
 
-// A point (u, v) inside the quad that most likely shows bare wall: the grid
-// sample whose color is closest to the wall reference `ref`, preferring the
-// middle of the quad among equals. Null when no sample is inside the photo.
-export function wallSeed(image, corners, ref, grid = 16) {
-  const [tl, tr, br, bl] = corners;
-  let best = null;
-  let bestScore = Infinity;
-  for (let j = 0; j < grid; j++) {
-    for (let i = 0; i < grid; i++) {
-      const u = 0.1 + (0.8 * (i + 0.5)) / grid;
-      const v = 0.1 + (0.8 * (j + 0.5)) / grid;
-      const x = lerp(lerp(tl[0], tr[0], u), lerp(bl[0], br[0], u), v);
-      const y = lerp(lerp(tl[1], tr[1], u), lerp(bl[1], br[1], u), v);
-      if (x < 0 || x >= 1 || y < 0 || y >= 1) continue;
-      const index = (Math.floor(y * image.height) * image.width + Math.floor(x * image.width)) * 4;
-      const color = ycbcr(image.data[index], image.data[index + 1], image.data[index + 2]);
-      const score = distance(color, ref) + 0.02 * Math.hypot(u - 0.5, v - 0.5);
-      if (score < bestScore) { bestScore = score; best = [x, y]; }
-    }
-  }
-  return best;
-}
-
 // Sensitivity 0..1 -> distance threshold of the automatic mask.
 // 0 turns the mask off (threshold above any possible distance).
 export function threshold(sensitivity) {

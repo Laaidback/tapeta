@@ -55,7 +55,6 @@
       <label class="slider" id="patternRow">Wielkość wzoru
         <input id="pattern" type="range" min="1" max="20" value="15">
       </label>
-      <button type="button" id="findWall">Rozpoznaj ścianę automatycznie</button>
       <label class="check"><input id="patterned" type="checkbox"> Ściana ma wzór (stara tapeta)</label>
       <p class="hint" id="patternedHint" hidden>Stary wzór znika spod nowej tapety. Meble wymaż gumką w kroku „Popraw”.</p>
       <label class="slider" id="sensitivityRow">Czułość (zdejmuje tapetę z mebli)
@@ -85,7 +84,6 @@
         <button type="button" id="undo" disabled>Cofnij</button>
       </div>
       <div id="brushTools" class="group">
-        <label class="check"><input id="coverage" type="checkbox"> Pokaż, gdzie jest tapeta (na zielono)</label>
         <label class="check"><input id="smart" type="checkbox" checked> Mądra gumka (zatrzymuje się na krawędzi)</label>
         <label class="slider">Rozmiar
           <input id="brush" type="range" min="1" max="10" value="4">
@@ -95,19 +93,25 @@
         <p class="hint" id="objectStatus"></p>
         <div class="segmented">
           <button type="button" id="cutObject" class="primary" disabled>Wytnij</button>
+          <button type="button" id="addObject" disabled>Dodaj tapetę</button>
           <button type="button" id="clearObject" disabled>Odznacz</button>
         </div>
+        <label class="slider">Dokładność koloru (w prawo zaznacza więcej)
+          <input id="tolerance" type="range" min="1" max="30" value="8">
+        </label>
       </div>
       <div id="polygonTools" class="group" hidden>
-        <p class="hint">Dotykaj kolejne rogi mebla. Punkty można przesuwać. Dotknij pierwszy punkt albo „Wytnij”.</p>
+        <p class="hint">Dotykaj kolejne rogi mebla. Punkty można przesuwać. Dotknij pierwszy punkt albo „Wytnij”. „Dodaj tapetę” kładzie tapetę w kształcie.</p>
         <div class="segmented">
           <button type="button" id="cut" class="primary" disabled>Wytnij</button>
-          <button type="button" id="clearShape" disabled>Wyczyść punkty</button>
+          <button type="button" id="addShape" disabled>Dodaj tapetę</button>
+          <button type="button" id="clearShape" disabled>Wyczyść</button>
         </div>
       </div>
     </div>
 
     <div id="output" hidden>
+      <label class="check wide"><input id="coverage" type="checkbox"> Pokaż, gdzie jest tapeta (na zielono)</label>
       <button type="button" id="before">Przed / Po</button>
       <button type="button" id="save">Zapisz zdjęcie</button>
       <button type="button" id="share" class="primary">Udostępnij</button>

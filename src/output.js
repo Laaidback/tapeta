@@ -3,6 +3,10 @@ import { exportName } from './layout.js';
 const $ = (id) => document.getElementById(id);
 
 export function setupOutput(ctx) {
+  document.getElementById('coverage').addEventListener('change', (event) => {
+    ctx.state.coverage = event.target.checked;
+    ctx.requestDraw();
+  });
   const { state } = ctx;
   const before = $('before');
   const share = $('share');

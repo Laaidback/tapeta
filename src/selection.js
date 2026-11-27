@@ -1,72 +1,44 @@
-// Pure helpers for the "Obiekt" tool: turning a segmentation result into a
-// selection (one byte per pixel, 1 = selected).
+// Pure helpers for the "Obiekt" tool. A selection is one byte per pixel,
+// 1 = selected.
+import { LUMA_WEIGHT, patchColor } from './color.js';
 
-// The connected region around the touched point (u, v: 0..1) in which
-// `category` (a category mask, one byte per pixel) keeps the same value.
-// Stray patches of the same category elsewhere are left out.
+// Magic wand: the connected region around photo pixel (cx, cy) whose color is
+// within `limit` of the typical color at that point (color.patchColor,
+// color.distance). `image` is { data, width, height } (ImageData).
 // Returns { data, share }, where `share` is the selected fraction of the image.
-export function objectAt(category, width, height, u, v) {
-  const x = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
-  const y = Math.min(height - 1, Math.max(0, Math.floor(v * height)));
-  const wanted = category[y * width + x];
+export function colorRegion(image, cx, cy, limit) {
+  const { data: pixels, width, height } = image;
+  const [refY, refCb, refCr] = patchColor(image, cx, cy);
+  const x = Math.min(width - 1, Math.max(0, Math.round(cx)));
+  const y = Math.min(height - 1, Math.max(0, Math.round(cy)));
   const data = new Uint8Array(width * height);
-  const stack = [y * width + x];
-  data[stack[0]] = 1;
+  const stack = new Int32Array(width * height);
+  let top = 0;
   let count = 0;
-  while (stack.length) {
-    const index = stack.pop();
+  const similar = (index) => {
+    const R = pixels[index * 4] / 255, G = pixels[index * 4 + 1] / 255, B = pixels[index * 4 + 2] / 255;
+    const luma = 0.299 * R + 0.587 * G + 0.114 * B;
+    const cb = 0.5 + (B - luma) * 0.564;
+    const cr = 0.5 + (R - luma) * 0.713;
+    return Math.hypot(cb - refCb, cr - refCr) + LUMA_WEIGHT * Math.abs(luma - refY) < limit;
+  };
+  const visit = (index) => {
+    if (data[index] || !similar(index)) return;
+    data[index] = 1;
+    stack[top++] = index;
+  };
+  data[y * width + x] = 1; // the touched pixel is always selected
+  stack[top++] = y * width + x;
+  while (top) {
+    const index = stack[--top];
     count++;
     const column = index % width;
-    const visit = (next) => {
-      if (data[next] || category[next] !== wanted) return;
-      data[next] = 1;
-      stack.push(next);
-    };
     if (column > 0) visit(index - 1);
     if (column < width - 1) visit(index + 1);
     if (index >= width) visit(index - width);
     if (index < data.length - width) visit(index + width);
   }
   return { data, share: count / data.length };
-}
-
-// Splits the inside of the wall quads into wall and not-wall from the model's
-// answers. `runs` is one entry per wall: { category, u, v, corners } — the
-// category mask for the seed point (u, v) inside that wall's quad `corners`
-// (normalized). `inside(corners, x, y)` tests a point against a quad.
-// Returns { wall, other, share }: two selections and the wall's share of the
-// quads' area. `other` is grown by `grow` pixels so the wallpaper keeps off
-// the edges of furniture.
-export function wallSelection(runs, width, height, inside, grow = 0) {
-  const wall = new Uint8Array(width * height);
-  const quads = new Uint8Array(width * height);
-  runs.forEach(({ category, u, v, corners }) => {
-    const sx = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
-    const sy = Math.min(height - 1, Math.max(0, Math.floor(v * height)));
-    const wanted = category[sy * width + sx];
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!inside(corners, (x + 0.5) / width, (y + 0.5) / height)) continue;
-        const index = y * width + x;
-        quads[index] = 1;
-        if (category[index] === wanted) wall[index] = 1;
-      }
-    }
-  });
-  let other = new Uint8Array(width * height);
-  let area = 0;
-  for (let i = 0; i < other.length; i++) {
-    if (!quads[i]) continue;
-    area++;
-    if (!wall[i]) other[i] = 1;
-  }
-  other = growSelection(other, width, height, grow);
-  let count = 0;
-  for (let i = 0; i < wall.length; i++) {
-    if (other[i]) wall[i] = 0;
-    count += wall[i];
-  }
-  return { wall, other, share: area ? count / area : 0 };
 }
 
 // Union of two selections of the same size; `a` may be null.

@@ -1,7 +1,7 @@
 // Polygon tool of the "Popraw" step: tap the corners of a piece of furniture,
 // then cut the shape out of the wallpaper. The wallpaper is hidden while the
 // shape is drawn (see `params` in app.js) so the furniture is visible.
-import { ERASE } from './mask.js';
+import { ERASE, RESTORE } from './mask.js';
 
 const $ = (id) => document.getElementById(id);
 const GRAB = 22;     // CSS pixels around a point that grab it
@@ -51,6 +51,7 @@ export function setupPolygon(ctx, done) {
 
   function showUi() {
     $('cut').disabled = state.polygon.length < 3;
+    $('addShape').disabled = state.polygon.length < 3;
     $('clearShape').disabled = state.polygon.length === 0;
   }
 
@@ -62,18 +63,19 @@ export function setupPolygon(ctx, done) {
     ctx.requestDraw();
   }
 
-  function cut() {
+  function cut(value = ERASE) {
     if (state.polygon.length < 3) return;
     const points = state.polygon.map(([u, v]) => [u * state.room.width, v * state.room.height]);
     state.mask.begin();
-    const rect = state.mask.fill(points, ERASE);
+    const rect = state.mask.fill(points, value);
     state.mask.end();
     state.polygonDone = true; // show the result until the next shape is started
     reset();
     done(rect);
   }
 
-  $('cut').addEventListener('click', cut);
+  $('cut').addEventListener('click', () => cut(ERASE));
+  $('addShape').addEventListener('click', () => cut(RESTORE));
   $('clearShape').addEventListener('click', reset);
   ctx.onDraw(place);
   ctx.onStep(reset);

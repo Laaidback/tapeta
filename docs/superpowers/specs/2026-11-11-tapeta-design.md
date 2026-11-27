@@ -213,3 +213,11 @@ Przycisk „Rozpoznaj ścianę automatycznie” w kroku „Tapeta”. Dla każde
 Bezpieczniki: ściana poniżej 10% czworokąta — komunikat o niepowodzeniu; powyżej 97% — „Nie znalazłem mebli”, maska bez zmian.
 
 Stan: na sztucznym pokoju model uznaje cały czworokąt za ścianę (bezpiecznik 97%). Jakość na prawdziwych zdjęciach nie sprawdzona.
+
+## Bez modelu: różdżka kolorem i zieleń zasięgu (2026-11-27)
+
+Model MediaPipe wypadł po teście użytkownika: zaznaczał plamy na ścianie zamiast obiektów, a rozpoznawanie ściany nic nie dawało. Usunięte: `src/segmenter.js`, przycisk „Rozpoznaj ścianę automatycznie”. Sekcje wyżej o modelu są nieaktualne.
+
+- „Obiekt” to różdżka kolorem (`colorRegion` w selection.js): spójny obszar wokół dotkniętego punktu o kolorze w granicy `0,01 × suwak` od typowego koloru punktu (`patchColor`). Suwak „Dokładność koloru” 1–30, domyślnie 8; zmiana przelicza zaznaczenie ze wszystkich dotknięć. Przyciski „Wytnij”, „Dodaj tapetę”, „Odznacz”.
+- „Wielokąt” ma też „Dodaj tapetę” (wypełnia kształt wartością „przywróć”) — proste krawędzie tapety w obie strony.
+- W „Wielokącie” i „Obiekcie” zamiast samego zdjęcia widać zdjęcie z zielenią tam, gdzie jest tapeta. Przełącznik „Pokaż, gdzie jest tapeta” stoi przy „Przed / Po” i działa w krokach „Tapeta” i „Popraw”.

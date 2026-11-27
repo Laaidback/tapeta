@@ -1,29 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { objectAt, mergeSelection, growSelection } from '../src/selection.js';
-
-test('objectAt: selects the category under the touched point', () => {
-  const category = new Uint8Array([
-    0, 0, 7, 7,
-    0, 0, 7, 7,
-  ]);
-  const left = objectAt(category, 4, 2, 0.1, 0.5);
-  assert.deepEqual([...left.data], [1, 1, 0, 0, 1, 1, 0, 0]);
-  assert.equal(left.share, 0.5);
-  const right = objectAt(category, 4, 2, 0.9, 0.9);
-  assert.deepEqual([...right.data], [0, 0, 1, 1, 0, 0, 1, 1]);
-  assert.equal(objectAt(category, 4, 2, 1, 1).data[7], 1); // edge clamps
-});
-
-test('objectAt: leaves out separate patches of the same category', () => {
-  const category = new Uint8Array([
-    5, 0, 0, 5,
-    5, 0, 0, 5,
-  ]);
-  const left = objectAt(category, 4, 2, 0.1, 0.1);
-  assert.deepEqual([...left.data], [1, 0, 0, 0, 1, 0, 0, 0]);
-  assert.equal(left.share, 0.25);
-});
+import { colorRegion, mergeSelection, growSelection } from '../src/selection.js';
 
 test('mergeSelection: union, null on the left', () => {
   const a = new Uint8Array([1, 0, 0]);
@@ -42,25 +19,26 @@ test('growSelection: grows by the radius in every direction', () => {
   assert.equal(growSelection(data, 5, 5, 0), data);
 });
 
-test('wallSelection: wall and not-wall inside the quad only', async () => {
-  const { wallSelection } = await import('../src/selection.js');
-  // 4x2: left half is the quad; category 3 under the seed, 9 is furniture.
-  const category = new Uint8Array([
-    3, 9, 3, 3,
-    3, 3, 9, 9,
-  ]);
-  const inside = (corners, x) => x < corners;
-  const found = wallSelection([{ category, u: 0.1, v: 0.1, corners: 0.5 }], 4, 2, inside);
-  assert.deepEqual([...found.wall], [1, 0, 0, 0, 1, 1, 0, 0]);
-  assert.deepEqual([...found.other], [0, 1, 0, 0, 0, 0, 0, 0]);
-  assert.equal(found.share, 0.75);
+function image(width, height, color) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < width * height; i++) data.set([...color(i % width, Math.floor(i / width)), 255], i * 4);
+  return { data, width, height };
+}
+
+test('colorRegion: selects the touched object, not the wall or a separate twin', () => {
+  // Two blue blocks on a beige wall; only the touched one is selected.
+  const blue = (x, y) => y >= 5 && y < 15 && ((x >= 2 && x < 8) || (x >= 12 && x < 18));
+  const room = image(20, 20, (x, y) => (blue(x, y) ? [40, 60, 140] : [200, 190, 170]));
+  const region = colorRegion(room, 4, 10, 0.08);
+  assert.equal(region.data.filter((value) => value).length, 60);
+  assert.equal(region.data[10 * 20 + 4], 1);
+  assert.equal(region.data[10 * 20 + 14], 0);
+  assert.equal(region.data[2 * 20 + 4], 0);
+  assert.equal(region.share, 60 / 400);
 });
 
-test('wallSelection: growing the furniture takes wall away', async () => {
-  const { wallSelection } = await import('../src/selection.js');
-  const category = new Uint8Array(25).fill(1);
-  category[12] = 2;
-  const found = wallSelection([{ category, u: 0, v: 0, corners: null }], 5, 5, () => true, 1);
-  assert.equal(found.other.filter((value) => value).length, 9);
-  assert.equal(found.wall.filter((value) => value).length, 16);
+test('colorRegion: a higher limit takes in a similar shade', () => {
+  const room = image(20, 1, (x) => (x < 10 ? [100, 100, 100] : [130, 130, 130]));
+  assert.equal(colorRegion(room, 2, 0, 0.02).data.filter((value) => value).length, 10);
+  assert.equal(colorRegion(room, 2, 0, 0.05).data.filter((value) => value).length, 20);
 });

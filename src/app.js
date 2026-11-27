@@ -68,9 +68,9 @@ function params() {
   return {
     ...state,
     hasPaper: !!state.paper,
-    coverage: state.coverage && state.step === 4,
-    // The wallpaper is hidden while a shape is drawn, so the furniture is visible.
-    showOriginal: state.showOriginal
+    // While a shape or an object is marked the photo is shown with the
+    // wallpaper area tinted, so both the furniture and the coverage are visible.
+    coverage: (state.coverage && state.step >= 3)
       || (state.step === 4 && (state.tool === 'polygon' || state.tool === 'object') && !state.polygonDone),
     view: v ? { x: v.x / w, y: v.y / h, w: v.w / w, h: v.h / h } : null,
   };

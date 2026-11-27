@@ -83,3 +83,13 @@ test('wallSeed: picks a point with the wall color, not the furniture in the midd
   assert.ok(u < 0.3 || u >= 0.7 || v < 0.3 || v >= 0.7);
   assert.equal(wallSeed(image, [[2, 2], [3, 2], [3, 3], [2, 3]], ycbcr(0, 0, 0)), null);
 });
+
+test('patchColor: one odd pixel under the finger does not set the color', async () => {
+  const { patchColor } = await import('../src/color.js');
+  const image = solidImage(20, 20, [40, 60, 140]);
+  image.data.set([255, 255, 255, 255], (10 * 20 + 10) * 4);
+  const c = patchColor(image, 10, 10);
+  const want = ycbcr(40, 60, 140);
+  near(c[0], want[0]); near(c[1], want[1]); near(c[2], want[2]);
+  assert.ok(patchColor(image, 0, 0)); // corner clamps
+});

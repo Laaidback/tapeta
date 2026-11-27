@@ -1,4 +1,4 @@
-import { LUMA_WEIGHT } from './color.js';
+import { LUMA_WEIGHT, patchColor } from './color.js';
 
 export const NEUTRAL = 128; // automatic mask decides
 export const ERASE = 0;     // wallpaper removed
@@ -151,18 +151,13 @@ export class Mask {
 }
 
 // Filter for the smart eraser: true for pixels whose color is close to the
-// pixel at (cx, cy). Same math as color.ycbcr + color.distance, inlined so the
+// typical color around (cx, cy) (see patchColor). Same math as color.ycbcr + color.distance, inlined so the
 // hot loop allocates nothing.
 export function similarFilter(image, cx, cy, limit = SMART_LIMIT) {
-  const { data, width, height } = image;
-  const px = Math.min(width - 1, Math.max(0, Math.round(cx)));
-  const py = Math.min(height - 1, Math.max(0, Math.round(cy)));
-  const at = (index) => {
-    const R = data[index * 4] / 255, G = data[index * 4 + 1] / 255, B = data[index * 4 + 2] / 255;
-    const y = 0.299 * R + 0.587 * G + 0.114 * B;
-    return [y, (B - y) * 0.564, (R - y) * 0.713];
-  };
-  const [refY, refCb, refCr] = at(py * width + px);
+  const { data } = image;
+  const [refY, cb, cr] = patchColor(image, cx, cy);
+  const refCb = cb - 0.5;
+  const refCr = cr - 0.5;
   return (index) => {
     const R = data[index * 4] / 255, G = data[index * 4 + 1] / 255, B = data[index * 4 + 2] / 255;
     const y = 0.299 * R + 0.587 * G + 0.114 * B;

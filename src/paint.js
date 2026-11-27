@@ -1,6 +1,6 @@
 import { ERASE, RESTORE, similarFilter, union } from './mask.js';
 import { zoomView } from './layout.js';
-import { ycbcr } from './color.js';
+import { patchColor } from './color.js';
 import { setupPolygon } from './polygon.js';
 import { setupObject } from './object.js';
 
@@ -49,16 +49,12 @@ export function setupPaint(ctx) {
       return;
     }
     const [u, v] = ctx.toImage(mouse.clientX, mouse.clientY);
-    const x = Math.min(state.room.width - 1, Math.max(0, Math.round(u * state.room.width)));
-    const y = Math.min(state.room.height - 1, Math.max(0, Math.round(v * state.room.height)));
-    const index = (y * state.room.width + x) * 4;
-    const { data } = state.roomData;
     state.hover = {
       u, v,
       radius: brushRadius(),
       pixel: state.room.width / state.view.w,
       smart: state.smart,
-      ref: ycbcr(data[index], data[index + 1], data[index + 2]),
+      ref: patchColor(state.roomData, u * state.room.width, v * state.room.height),
       color: state.tool === 'erase' ? ERASE_TINT : RESTORE_TINT,
     };
     ctx.requestDraw();

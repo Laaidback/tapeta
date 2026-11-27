@@ -23,6 +23,23 @@ export function percentile(values, q) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
 }
 
+// Typical color [Y, Cb, Cr] around photo pixel (cx, cy): the per-channel
+// median of a (2 * patch + 1) square. One pixel alone is unreliable on real
+// photos (noise, JPEG blocks, a highlight or an edge under the finger).
+export function patchColor(image, cx, cy, patch = 3) {
+  const px = Math.min(image.width - 1, Math.max(0, Math.round(cx)));
+  const py = Math.min(image.height - 1, Math.max(0, Math.round(cy)));
+  const ys = [], cbs = [], crs = [];
+  for (let y = Math.max(0, py - patch); y <= Math.min(image.height - 1, py + patch); y++) {
+    for (let x = Math.max(0, px - patch); x <= Math.min(image.width - 1, px + patch); x++) {
+      const index = (y * image.width + x) * 4;
+      const c = ycbcr(image.data[index], image.data[index + 1], image.data[index + 2]);
+      ys.push(c[0]); cbs.push(c[1]); crs.push(c[2]);
+    }
+  }
+  return [median(ys), median(cbs), median(crs)];
+}
+
 const lerp = (a, b, t) => a + (b - a) * t;
 
 // [Y, Cb, Cr, light] from a grid of samples in the central 80% of the quad:

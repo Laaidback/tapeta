@@ -139,3 +139,11 @@ test('stamp: sets pixels under a lower-resolution selection and can be undone', 
   mask.undo();
   assert.ok(mask.data.every((value) => value === NEUTRAL));
 });
+
+test('similarFilter: a noisy start pixel still erases the object around it', () => {
+  const data = new Uint8ClampedArray(20 * 20 * 4);
+  for (let i = 0; i < 400; i++) data.set([40, 60, 140, 255], i * 4);
+  data.set([250, 250, 250, 255], (10 * 20 + 10) * 4); // highlight under the finger
+  const filter = similarFilter({ data, width: 20, height: 20 }, 10, 10);
+  assert.ok(filter(5 * 20 + 5));
+});

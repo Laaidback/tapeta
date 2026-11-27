@@ -199,3 +199,9 @@ Poza zakresem: ściany, które się nie stykają; więcej niż jeden narożnik. 
 ## Zasięg tapety (2026-11-27)
 
 Przełącznik „Pokaż, gdzie jest tapeta (na zielono)” przy gumce i pędzlu w kroku „Popraw” (domyślnie wyłączony). Zamiast tapety widać zdjęcie pokoju, a obszar z tapetą jest zabarwiony na zielono (`uCoverage`). Widać więc jednocześnie meble pod spodem i granicę tapety. Nie trafia do zapisanego zdjęcia.
+
+## Rogi poza zdjęciem i narzędzie „Obiekt” (2026-11-27)
+
+- Krok „Ściana”: zdjęcie rysuje się w 70% wielkości (`shrinkView`, `WALL_STEP_SCALE`), z miejscem dookoła. Punkty można wynieść poza zdjęcie (zakres −1…2), gdy róg ściany jest ucięty. Tapeta rysuje się tylko na zdjęciu.
+- Narzędzie „Obiekt” (`src/object.js`, czyste funkcje w `src/selection.js`): dotknięcie przedmiotu uruchamia MediaPipe Interactive Segmenter (model „magic touch”). Biblioteka `@mediapipe/tasks-vision` 0.10.14 z jsDelivr i model z `storage.googleapis.com` pobierają się przy pierwszym użyciu; zdjęcie zostaje w przeglądarce. Zaznaczenie to spójny obszar wokół dotkniętego punktu; kolejne dotknięcia dodają. Wynik większy niż 60% zdjęcia jest odrzucany. „Wytnij” powiększa zaznaczenie o 0,3% dłuższego boku i wycina je z tapety (`Mask.stamp`), „Odznacz” czyści. Tapeta jest ukryta jak przy wielokącie.
+- Pasek narzędzi zawija się: Gumka, Pędzel, Wielokąt, Obiekt, pod spodem „Cofnij”.

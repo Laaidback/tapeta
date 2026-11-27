@@ -50,10 +50,6 @@ export function setupPolygon(ctx, done) {
   }
 
   function showUi() {
-    const polygon = state.tool === 'polygon';
-    $('brushTools').hidden = polygon;
-    $('paintHint').hidden = polygon;
-    $('polygonTools').hidden = !polygon;
     $('cut').disabled = state.polygon.length < 3;
     $('clearShape').disabled = state.polygon.length === 0;
   }

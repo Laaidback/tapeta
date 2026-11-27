@@ -3,7 +3,7 @@ import { addSecondWall, handlePoints, moveHandle } from './walls.js';
 const LOUPE = 120;      // CSS pixels
 const MAGNIFY = 3;
 const INSET = 22;       // half of the handle, CSS pixels
-const clamp = (value) => Math.min(1.2, Math.max(-0.2, value));
+const clamp = (value) => Math.min(2, Math.max(-1, value)); // corners may lie outside the photo
 
 export function setupCorners(ctx) {
   const { state } = ctx;

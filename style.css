@@ -45,6 +45,9 @@ header { padding: calc(8px + env(safe-area-inset-top)) 12px 8px; }
   touch-action: none;
 }
 #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#pick { position: absolute; pointer-events: none; }
+#tool { flex-wrap: wrap; }
+#tool button { flex: 1 1 22%; }
 #shape { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #shapeFill { fill: rgba(230, 60, 60, 0.25); stroke: #fff; stroke-width: 2; stroke-dasharray: 6 4; }
 #shapeDots circle { fill: #fff; stroke: #2a2826; stroke-width: 2; }

@@ -1,6 +1,6 @@
 import { loadImage } from './images.js';
 import { createRenderer } from './renderer.js';
-import { fitView } from './layout.js';
+import { fitView, shrinkView } from './layout.js';
 import { wallReference } from './color.js';
 import { Mask } from './mask.js';
 import { lightGrid, wallWeights, smoothLight } from './light.js';
@@ -13,6 +13,7 @@ const $ = (id) => document.getElementById(id);
 const stage = $('stage');
 const canvas = $('view');
 const LAST_STEP = 4;
+const WALL_STEP_SCALE = 0.7;
 const DEFAULT_CORNERS = [[0.15, 0.15], [0.85, 0.15], [0.85, 0.85], [0.15, 0.85]];
 
 const state = {
@@ -45,7 +46,7 @@ const state = {
   coverage: false,   // "Popraw": tint the wallpaper area instead of drawing the wallpaper
   hover: null,       // brush preview under the mouse (see paint.js)
   polygon: [],       // points of the shape being drawn (normalized image coordinates)
-  polygonDone: false, // a shape was just cut: show the result
+  polygonDone: false, // a shape or an object was just cut: show the result
 };
 
 const drawHooks = [];
@@ -70,9 +71,15 @@ function params() {
     coverage: state.coverage && state.step === 4,
     // The wallpaper is hidden while a shape is drawn, so the furniture is visible.
     showOriginal: state.showOriginal
-      || (state.step === 4 && state.tool === 'polygon' && !state.polygonDone),
+      || (state.step === 4 && (state.tool === 'polygon' || state.tool === 'object') && !state.polygonDone),
     view: v ? { x: v.x / w, y: v.y / h, w: v.w / w, h: v.h / h } : null,
   };
+}
+
+// Image rectangle a step starts with. The "Ściana" step shows the photo
+// smaller, with room around it for corners of a wall that the photo cuts off.
+function homeView() {
+  return state.step === 2 ? shrinkView(state.fit, WALL_STEP_SCALE) : { ...state.fit };
 }
 
 let queued = false;
@@ -92,7 +99,7 @@ function resize() {
   canvas.height = Math.max(1, Math.round(stage.clientHeight * ratio));
   if (state.room) {
     state.fit = fitView(stage.clientWidth, stage.clientHeight, state.room.width, state.room.height, 16);
-    state.view = { ...state.fit };
+    state.view = homeView();
   }
   requestDraw();
 }
@@ -152,7 +159,7 @@ function updateUi() {
 
 function goTo(step) {
   state.step = step;
-  if (state.fit) state.view = { ...state.fit };
+  if (state.fit) state.view = homeView();
   updateUi();
   stepHooks.forEach((hook) => hook());
   requestDraw();

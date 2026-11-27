@@ -96,6 +96,22 @@ export class Mask {
     return rect;
   }
 
+  // Sets `value` wherever `selection` (one byte per pixel, any size, sampled
+  // nearest) is non-zero. Returns the touched rectangle, or null.
+  stamp(selection, width, height, value) {
+    let rect = null;
+    for (let y = 0; y < this.height; y++) {
+      const row = Math.min(height - 1, Math.floor(((y + 0.5) * height) / this.height)) * width;
+      for (let x = 0; x < this.width; x++) {
+        if (!selection[row + Math.min(width - 1, Math.floor(((x + 0.5) * width) / this.width))]) continue;
+        this.data[y * this.width + x] = value;
+        rect = union(rect, { x0: x, y0: y, x1: x, y1: y });
+      }
+    }
+    this.dirty = union(this.dirty, rect);
+    return rect;
+  }
+
   // Finishes the stroke. Returns its rectangle, or null when nothing was drawn.
   end() {
     const rect = this.dirty;

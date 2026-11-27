@@ -18,6 +18,7 @@
 
   <main id="stage">
     <canvas id="view"></canvas>
+    <canvas id="pick" hidden></canvas>
     <svg id="shape" hidden><polygon id="shapeFill"></polygon><g id="shapeDots"></g></svg>
     <svg id="outline" hidden><polygon id="quad"></polygon><line id="seam"></line></svg>
     <div class="handle" hidden></div>
@@ -39,6 +40,7 @@
 
     <div class="step" data-step="2" hidden>
       <p class="hint" id="wallHint">Przesuń cztery punkty na rogi ściany.</p>
+      <p class="hint">Róg ucięty na zdjęciu? Wynieś punkt poza zdjęcie.</p>
       <button type="button" id="secondWall">Dodaj drugą ścianę</button>
     </div>
 
@@ -78,6 +80,7 @@
         <button type="button" data-tool="erase" class="on">Gumka</button>
         <button type="button" data-tool="restore">Pędzel</button>
         <button type="button" data-tool="polygon">Wielokąt</button>
+        <button type="button" data-tool="object">Obiekt</button>
         <button type="button" id="undo" disabled>Cofnij</button>
       </div>
       <div id="brushTools" class="group">
@@ -86,6 +89,13 @@
         <label class="slider">Rozmiar
           <input id="brush" type="range" min="1" max="10" value="4">
         </label>
+      </div>
+      <div id="objectTools" class="group" hidden>
+        <p class="hint" id="objectStatus"></p>
+        <div class="segmented">
+          <button type="button" id="cutObject" class="primary" disabled>Wytnij</button>
+          <button type="button" id="clearObject" disabled>Odznacz</button>
+        </div>
       </div>
       <div id="polygonTools" class="group" hidden>
         <p class="hint">Dotykaj kolejne rogi mebla. Punkty można przesuwać. Dotknij pierwszy punkt albo „Wytnij”.</p>

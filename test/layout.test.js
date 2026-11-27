@@ -39,3 +39,8 @@ test('coverScale crops the mural like object-fit: cover', () => {
 test('exportName formats local date and time', () => {
   assert.equal(exportName(new Date(2026, 10, 11, 9, 5)), 'tapeta-2026-11-11-0905.jpg');
 });
+
+test('shrinkView: scales around the center', async () => {
+  const { shrinkView } = await import('../src/layout.js');
+  assert.deepEqual(shrinkView({ x: 10, y: 20, w: 100, h: 50 }, 0.5), { x: 35, y: 32.5, w: 50, h: 25 });
+});

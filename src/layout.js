@@ -21,6 +21,13 @@ export function fitView(stageW, stageH, imageW, imageH, pad = 0) {
   return { x: (stageW - w) / 2, y: (stageH - h) / 2, w, h };
 }
 
+// `view` scaled by `scale` around its center.
+export function shrinkView(view, scale) {
+  const w = view.w * scale;
+  const h = view.h * scale;
+  return { x: view.x + (view.w - w) / 2, y: view.y + (view.h - h) / 2, w, h };
+}
+
 // Zoom `view` by `factor` around stage point (cx, cy). Returns `fit` at zoom <= 1.
 export function zoomView(view, fit, cx, cy, factor, maxZoom = 8) {
   const current = view.w / fit.w;

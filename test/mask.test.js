@@ -126,3 +126,16 @@ test('fill: clips to the mask and returns null when fully outside', () => {
   assert.equal(mask.fill([[20, 20], [30, 20], [30, 30]], ERASE), null);
   mask.end();
 });
+
+test('stamp: sets pixels under a lower-resolution selection and can be undone', () => {
+  const mask = new Mask(8, 8);
+  const selection = new Uint8Array([0, 0, 0, 1]); // 2x2: bottom-right quarter
+  mask.begin();
+  const rect = mask.stamp(selection, 2, 2, ERASE);
+  mask.end();
+  assert.deepEqual(rect, { x0: 4, y0: 4, x1: 7, y1: 7 });
+  assert.equal(mask.data.filter((value) => value === ERASE).length, 16);
+  assert.equal(mask.stamp(new Uint8Array(4), 2, 2, ERASE), null);
+  mask.undo();
+  assert.ok(mask.data.every((value) => value === NEUTRAL));
+});

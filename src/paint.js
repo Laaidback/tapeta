@@ -2,6 +2,7 @@ import { ERASE, RESTORE, similarFilter, union } from './mask.js';
 import { zoomView } from './layout.js';
 import { ycbcr } from './color.js';
 import { setupPolygon } from './polygon.js';
+import { setupObject } from './object.js';
 
 const ERASE_TINT = [0.9, 0.2, 0.2];
 const RESTORE_TINT = [0.2, 0.7, 0.4];
@@ -42,7 +43,7 @@ export function setupPaint(ctx) {
 
   // Preview under the mouse of what a press would change. Touch has no hover.
   function showHover() {
-    const visible = active() && mouse && !stroke && pointers.size === 0 && state.tool !== 'polygon';
+    const visible = active() && mouse && !stroke && pointers.size === 0 && !shape();
     if (!visible) {
       if (state.hover) { state.hover = null; ctx.requestDraw(); }
       return;
@@ -90,8 +91,8 @@ export function setupPaint(ctx) {
     if (!active()) return;
     stage.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, stagePoint(event));
-    if (pointers.size === 1 && state.tool === 'polygon') {
-      polygon.down(event);
+    if (pointers.size === 1 && shape()) {
+      shape().down(event);
     } else if (pointers.size === 1) {
       const point = photoPoint(event);
       state.mask.begin();
@@ -104,6 +105,7 @@ export function setupPaint(ctx) {
       showHover();
     } else {
       polygon.cancel();
+      object.cancel();
       if (stroke) { // a second finger turns the gesture into pan/zoom
         upload(state.mask.cancel());
         stroke = null;
@@ -116,13 +118,13 @@ export function setupPaint(ctx) {
     if (!pointers.has(event.pointerId)) {
       if (event.pointerType === 'touch' || !active()) return;
       mouse = { clientX: event.clientX, clientY: event.clientY };
-      if (state.tool === 'polygon') polygon.hover(event);
+      if (shape()) shape().hover(event);
       showHover();
       return;
     }
     pointers.set(event.pointerId, stagePoint(event));
-    if (pointers.size === 1 && state.tool === 'polygon') {
-      polygon.move(event);
+    if (pointers.size === 1 && shape()) {
+      shape().move(event);
     } else if (stroke && pointers.size === 1) {
       const point = photoPoint(event);
       dabLine(stroke.last, point);
@@ -149,8 +151,12 @@ export function setupPaint(ctx) {
       ctx.requestDraw();
       showUndo();
     }
-    if (pointers.size === 0 && state.tool === 'polygon' && event.type === 'pointerup') polygon.up(event);
-    else polygon.cancel();
+    if (pointers.size === 0 && shape() && event.type === 'pointerup') {
+      shape().up(event);
+    } else {
+      polygon.cancel();
+      object.cancel();
+    }
     if (event.pointerType !== 'touch') mouse = { clientX: event.clientX, clientY: event.clientY };
     showHover();
     pinch = pointers.size === 2 ? pinchState() : null; // third finger lifted: restart from the two left
@@ -179,6 +185,8 @@ export function setupPaint(ctx) {
       toolButtons.forEach((other) => other.classList.toggle('on', other === button));
       state.polygonDone = false;
       polygon.reset();
+      object.reset();
+      showTools();
     });
   });
   $('coverage').addEventListener('change', (event) => {
@@ -194,12 +202,24 @@ export function setupPaint(ctx) {
     showUndo();
   });
 
-  const polygon = setupPolygon(ctx, (rect) => {
+  const afterCut = (rect) => {
     upload(rect);
     ctx.updateLight();
     ctx.requestDraw();
     showUndo();
-  });
+  };
+  const polygon = setupPolygon(ctx, afterCut);
+  const object = setupObject(ctx, afterCut);
+  // The shape tool in use (tap to mark, then cut), or undefined for the brushes.
+  const shape = () => ({ polygon, object })[state.tool];
+
+  function showTools() {
+    $('brushTools').hidden = !!shape();
+    $('paintHint').hidden = !!shape();
+    $('polygonTools').hidden = state.tool !== 'polygon';
+    $('objectTools').hidden = state.tool !== 'object';
+  }
+  showTools();
 
   ctx.onStep(() => {
     mouse = null;
